@@ -1,17 +1,26 @@
 /* Fill the full admin content area. */
 #apppresser-accessibility-root,
-#apppresser-cookies-root {
+#apppresser-cookies-root,
+#apppresser-maintenance-root,
+#apppresser-social-share-root,
+#apppresser-options-root {
 	margin: 40px 30px;
 }
 
 body.settings_page_apppresser-accessibility .components-panel,
-body.settings_page_apppresser-cookies .components-panel {
+body.settings_page_apppresser-cookies .components-panel,
+body.settings_page_apppresser-maintenance .components-panel,
+body.settings_page_apppresser-social-share .components-panel,
+body.settings_page_apppresser-options .components-panel {
 	max-width: 740px;
 	margin: 0 auto;
 }
 
 body.settings_page_apppresser-accessibility #wpcontent,
-body.settings_page_apppresser-cookies #wpcontent {
+body.settings_page_apppresser-cookies #wpcontent,
+body.settings_page_apppresser-maintenance #wpcontent,
+body.settings_page_apppresser-social-share #wpcontent,
+body.settings_page_apppresser-options #wpcontent {
 	padding-left: 0;
 }
 

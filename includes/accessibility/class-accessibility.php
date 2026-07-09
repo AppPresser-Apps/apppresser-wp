@@ -29,6 +29,11 @@ class AppPresser_Accessibility {
 	 * @var array<string, array{label: string, help: string, panel: string}>
 	 */
 	private $options = array(
+		'hide_button'    => array(
+			'label' => 'Hide Accessibility Button',
+			'help'  => 'Removes the floating accessibility button from the frontend of your site.',
+			'panel' => 'general',
+		),
 		'font_size'      => array(
 			'label' => 'Enable large font size',
 			'help'  => 'Increases the base font size across the site for better readability.',
@@ -244,6 +249,11 @@ class AppPresser_Accessibility {
 	 * Enqueue frontend scripts and styles for the accessibility modal.
 	 */
 	public function enqueue_frontend_assets() {
+		// If the hide button option is enabled, skip all frontend assets.
+		if ( get_option( 'apppresser_hide_button_enabled', false ) ) {
+			return;
+		}
+
 		wp_enqueue_style(
 			'apppresser-accessibility-modal',
 			APPRESSER_WP_URL . '/assets/css/accessibility-modal.css',
@@ -266,16 +276,22 @@ class AppPresser_Accessibility {
 			true
 		);
 
-		$settings = array();
+		$settings         = array();
+		$frontend_options = array();
 		foreach ( $this->options as $key => $data ) {
-			$settings[ $key ] = get_option( 'apppresser_' . $key . '_enabled', false );
+			// Skip the hide_button option — it's admin-only and should not appear in the modal.
+			if ( 'hide_button' === $key ) {
+				continue;
+			}
+			$settings[ $key ]         = get_option( 'apppresser_' . $key . '_enabled', false );
+			$frontend_options[ $key ] = $data;
 		}
 
 		wp_localize_script(
 			'apppresser-accessibility-modal',
 			'apppresserAccessibilityFrontend',
 			array(
-				'options'  => $this->options,
+				'options'  => $frontend_options,
 				'settings' => $settings,
 			)
 		);

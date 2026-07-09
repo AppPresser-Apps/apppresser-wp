@@ -55,6 +55,13 @@ const AccessibilityApp = () => {
 	return (
 		<Panel>
 			<PanelBody
+				title={ __( 'General', 'apppresser-wp' ) }
+				initialOpen={ true }
+			>
+				{ renderToggles( 'general' ) }
+			</PanelBody>
+
+			<PanelBody
 				title={ __( 'Content Modules', 'apppresser-wp' ) }
 				initialOpen={ true }
 			>

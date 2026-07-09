@@ -6,10 +6,16 @@ import { createRoot } from '@wordpress/element';
 import AccessibilityApp from './components/AccessibilityApp';
 import CookiesApp from './components/CookiesApp';
 import CookieScannerApp from './components/CookieScannerApp';
+import MaintenanceApp from './components/MaintenanceApp';
+import SocialShareApp from './components/SocialShareApp';
+import OptionsApp from './components/OptionsApp';
 
 const accessibilityContainer = document.getElementById( 'apppresser-accessibility-root' );
 const cookiesContainer = document.getElementById( 'apppresser-cookies-root' );
 const scannerContainer = document.getElementById( 'apppresser-cookie-scanner-root' );
+const maintenanceContainer = document.getElementById( 'apppresser-maintenance-root' );
+const socialShareContainer = document.getElementById( 'apppresser-social-share-root' );
+const optionsContainer = document.getElementById( 'apppresser-options-root' );
 
 if ( accessibilityContainer ) {
 	const root = createRoot( accessibilityContainer );
@@ -24,4 +30,19 @@ if ( cookiesContainer ) {
 if ( scannerContainer ) {
 	const root = createRoot( scannerContainer );
 	root.render( <CookieScannerApp /> );
+}
+
+if ( maintenanceContainer ) {
+	const root = createRoot( maintenanceContainer );
+	root.render( <MaintenanceApp /> );
+}
+
+if ( socialShareContainer ) {
+	const root = createRoot( socialShareContainer );
+	root.render( <SocialShareApp /> );
+}
+
+if ( optionsContainer ) {
+	const root = createRoot( optionsContainer );
+	root.render( <OptionsApp /> );
 }

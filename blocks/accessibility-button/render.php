@@ -9,6 +9,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// If the hide button option is enabled, don't render anything.
+if ( get_option( 'apppresser_hide_button_enabled', false ) ) {
+	return '';
+}
+
 /**
  * Render the accessibility trigger button.
  *

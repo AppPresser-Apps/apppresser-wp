@@ -43,3 +43,15 @@ new AppPresser_Cookie_Consent();
 // Load cookie scanner & shortcodes.
 require_once APPRESSER_WP_DIR . 'includes/cookies/class-cookie-search.php';
 new AppPresser_Cookie_Search();
+
+// Load maintenance module.
+require_once APPRESSER_WP_DIR . 'includes/maintenance/class-maintenance.php';
+new AppPresser_Maintenance();
+
+// Load social share module.
+require_once APPRESSER_WP_DIR . 'includes/social-share/class-social-share.php';
+new AppPresser_Social_Share();
+
+// Load options module.
+require_once APPRESSER_WP_DIR . 'includes/options/class-options.php';
+new AppPresser_Options();
