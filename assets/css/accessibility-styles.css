@@ -1,0 +1,422 @@
+/* ==========================================================================
+   Accessibility Feature Styles
+   ==========================================================================
+   These rules are applied when the corresponding CSS class is added to
+   the <html> element by the accessibility modal JS.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Font Size — Increases base font size across the site.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-font-size {
+	font-size: 120%;
+}
+
+/* --------------------------------------------------------------------------
+   2. Readable Font — Switches to a highly legible, sans-serif font.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-readable-font,
+html.appp-a11y-readable-font body,
+html.appp-a11y-readable-font button,
+html.appp-a11y-readable-font input,
+html.appp-a11y-readable-font select,
+html.appp-a11y-readable-font textarea {
+	font-family: "Atkinson Hyperlegible", "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+html.appp-a11y-readable-font h1,
+html.appp-a11y-readable-font h2,
+html.appp-a11y-readable-font h3,
+html.appp-a11y-readable-font h4,
+html.appp-a11y-readable-font h5,
+html.appp-a11y-readable-font h6 {
+	font-family: "Atkinson Hyperlegible", "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Line Height — Increases line spacing for easier reading.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-line-height,
+html.appp-a11y-line-height body,
+html.appp-a11y-line-height p,
+html.appp-a11y-line-height li,
+html.appp-a11y-line-height td,
+html.appp-a11y-line-height th,
+html.appp-a11y-line-height div {
+	line-height: 1.8 !important;
+}
+
+html.appp-a11y-line-height h1,
+html.appp-a11y-line-height h2,
+html.appp-a11y-line-height h3,
+html.appp-a11y-line-height h4,
+html.appp-a11y-line-height h5,
+html.appp-a11y-line-height h6 {
+	line-height: 1.4 !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Big Cursor — Enlarges the mouse cursor for better visibility.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-big-cursor,
+html.appp-a11y-big-cursor * {
+	cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="2,2 2,28 10,20 16,30 20,28 14,18 26,18" fill="%23000" stroke="%23fff" stroke-width="1.5"/></svg>') 2 2, auto !important;
+}
+
+html.appp-a11y-big-cursor a,
+html.appp-a11y-big-cursor button,
+html.appp-a11y-big-cursor [role="button"],
+html.appp-a11y-big-cursor input[type="submit"],
+html.appp-a11y-big-cursor label,
+html.appp-a11y-big-cursor select,
+html.appp-a11y-big-cursor [onclick] {
+	cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M4,4 L12,28 L16,20 L26,26 L28,22 L18,16 L28,12 Z" fill="%23005a9c" stroke="%23fff" stroke-width="1.5"/></svg>') 4 4, pointer !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. Text Magnifier — Enlarges text on hover for better readability.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-text-magnifier p:hover,
+html.appp-a11y-text-magnifier li:hover,
+html.appp-a11y-text-magnifier td:hover,
+html.appp-a11y-text-magnifier th:hover,
+html.appp-a11y-text-magnifier span:hover,
+html.appp-a11y-text-magnifier div:hover {
+	font-size: 130% !important;
+	transition: font-size 0.15s ease;
+}
+
+/* --------------------------------------------------------------------------
+   6. Dyslexic Font — Switches to a dyslexia-friendly font.
+   -------------------------------------------------------------------------- */
+
+@font-face {
+	font-family: "OpenDyslexic";
+	src: local("OpenDyslexic"), local("OpenDyslexic-Regular");
+	font-display: swap;
+}
+
+html.appp-a11y-dyslexic-font,
+html.appp-a11y-dyslexic-font body,
+html.appp-a11y-dyslexic-font button,
+html.appp-a11y-dyslexic-font input,
+html.appp-a11y-dyslexic-font select,
+html.appp-a11y-dyslexic-font textarea {
+	font-family: "OpenDyslexic", "Comic Sans MS", "Lexend", -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+html.appp-a11y-dyslexic-font h1,
+html.appp-a11y-dyslexic-font h2,
+html.appp-a11y-dyslexic-font h3,
+html.appp-a11y-dyslexic-font h4,
+html.appp-a11y-dyslexic-font h5,
+html.appp-a11y-dyslexic-font h6 {
+	font-family: "OpenDyslexic", "Comic Sans MS", "Lexend", -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+html.appp-a11y-dyslexic-font p,
+html.appp-a11y-dyslexic-font li {
+	letter-spacing: 0.05em;
+	word-spacing: 0.15em;
+}
+
+/* --------------------------------------------------------------------------
+   7. Align Text — Left-aligns all text for a consistent reading experience.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-align-text,
+html.appp-a11y-align-text body,
+html.appp-a11y-align-text p,
+html.appp-a11y-align-text h1,
+html.appp-a11y-align-text h2,
+html.appp-a11y-align-text h3,
+html.appp-a11y-align-text h4,
+html.appp-a11y-align-text h5,
+html.appp-a11y-align-text h6,
+html.appp-a11y-align-text li,
+html.appp-a11y-align-text td,
+html.appp-a11y-align-text th,
+html.appp-a11y-align-text div {
+	text-align: left !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. Font Weight — Increases font weight for better contrast.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-font-weight,
+html.appp-a11y-font-weight body,
+html.appp-a11y-font-weight p,
+html.appp-a11y-font-weight li,
+html.appp-a11y-font-weight td,
+html.appp-a11y-font-weight th,
+html.appp-a11y-font-weight span,
+html.appp-a11y-font-weight div {
+	font-weight: 500 !important;
+}
+
+html.appp-a11y-font-weight h1,
+html.appp-a11y-font-weight h2,
+html.appp-a11y-font-weight h3,
+html.appp-a11y-font-weight h4,
+html.appp-a11y-font-weight h5,
+html.appp-a11y-font-weight h6,
+html.appp-a11y-font-weight strong,
+html.appp-a11y-font-weight b {
+	font-weight: 800 !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. Dark Contrast — Dark background with light text.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-dark-contrast {
+	background-color: #1a1a1a !important;
+}
+
+html.appp-a11y-dark-contrast body {
+	background-color: #1a1a1a !important;
+	color: #e0e0e0 !important;
+}
+
+html.appp-a11y-dark-contrast a {
+	color: #7eb8ff !important;
+}
+
+html.appp-a11y-dark-contrast a:visited {
+	color: #c09eff !important;
+}
+
+html.appp-a11y-dark-contrast a:hover,
+html.appp-a11y-dark-contrast a:focus {
+	color: #a3d0ff !important;
+}
+
+html.appp-a11y-dark-contrast h1,
+html.appp-a11y-dark-contrast h2,
+html.appp-a11y-dark-contrast h3,
+html.appp-a11y-dark-contrast h4,
+html.appp-a11y-dark-contrast h5,
+html.appp-a11y-dark-contrast h6 {
+	color: #ffffff !important;
+}
+
+html.appp-a11y-dark-contrast input,
+html.appp-a11y-dark-contrast textarea,
+html.appp-a11y-dark-contrast select {
+	background-color: #2d2d2d !important;
+	color: #e0e0e0 !important;
+	border-color: #555 !important;
+}
+
+html.appp-a11y-dark-contrast button {
+	background-color: #2d2d2d !important;
+	color: #e0e0e0 !important;
+	border-color: #555 !important;
+}
+
+html.appp-a11y-dark-contrast table,
+html.appp-a11y-dark-contrast th,
+html.appp-a11y-dark-contrast td {
+	border-color: #555 !important;
+}
+
+html.appp-a11y-dark-contrast blockquote {
+	background-color: #2d2d2d !important;
+	border-left-color: #7eb8ff !important;
+	color: #ccc !important;
+}
+
+html.appp-a11y-dark-contrast code,
+html.appp-a11y-dark-contrast pre {
+	background-color: #2d2d2d !important;
+	color: #e0e0e0 !important;
+}
+
+html.appp-a11y-dark-contrast img {
+	filter: brightness(0.9);
+}
+
+/* --------------------------------------------------------------------------
+   10. Light Contrast — Light background with dark text (clean reading).
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-light-contrast {
+	background-color: #fafafa !important;
+}
+
+html.appp-a11y-light-contrast body {
+	background-color: #fafafa !important;
+	color: #1a1a1a !important;
+}
+
+html.appp-a11y-light-contrast a {
+	color: #005a9c !important;
+}
+
+html.appp-a11y-light-contrast a:visited {
+	color: #5c2d91 !important;
+}
+
+html.appp-a11y-light-contrast a:hover,
+html.appp-a11y-light-contrast a:focus {
+	color: #003d6b !important;
+}
+
+html.appp-a11y-light-contrast h1,
+html.appp-a11y-light-contrast h2,
+html.appp-a11y-light-contrast h3,
+html.appp-a11y-light-contrast h4,
+html.appp-a11y-light-contrast h5,
+html.appp-a11y-light-contrast h6 {
+	color: #111 !important;
+}
+
+html.appp-a11y-light-contrast input,
+html.appp-a11y-light-contrast textarea,
+html.appp-a11y-light-contrast select {
+	background-color: #ffffff !important;
+	color: #1a1a1a !important;
+	border-color: #999 !important;
+}
+
+html.appp-a11y-light-contrast table,
+html.appp-a11y-light-contrast th,
+html.appp-a11y-light-contrast td {
+	border-color: #999 !important;
+}
+
+html.appp-a11y-light-contrast blockquote {
+	background-color: #f0f0f0 !important;
+	border-left-color: #005a9c !important;
+}
+
+/* --------------------------------------------------------------------------
+   11. High Contrast — Maximizes contrast between text and background.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-high-contrast {
+	background-color: #000000 !important;
+}
+
+html.appp-a11y-high-contrast body {
+	background-color: #000000 !important;
+	color: #ffffff !important;
+}
+
+html.appp-a11y-high-contrast a {
+	color: #ffff00 !important;
+	text-decoration: underline !important;
+}
+
+html.appp-a11y-high-contrast a:visited {
+	color: #ffccff !important;
+}
+
+html.appp-a11y-high-contrast a:hover,
+html.appp-a11y-high-contrast a:focus {
+	color: #ffff99 !important;
+	outline: 2px solid #ffff00 !important;
+}
+
+html.appp-a11y-high-contrast h1,
+html.appp-a11y-high-contrast h2,
+html.appp-a11y-high-contrast h3,
+html.appp-a11y-high-contrast h4,
+html.appp-a11y-high-contrast h5,
+html.appp-a11y-high-contrast h6 {
+	color: #ffffff !important;
+}
+
+html.appp-a11y-high-contrast input,
+html.appp-a11y-high-contrast textarea,
+html.appp-a11y-high-contrast select {
+	background-color: #000000 !important;
+	color: #ffffff !important;
+	border: 2px solid #ffffff !important;
+}
+
+html.appp-a11y-high-contrast button {
+	background-color: #000000 !important;
+	color: #ffffff !important;
+	border: 2px solid #ffffff !important;
+}
+
+html.appp-a11y-high-contrast button:hover,
+html.appp-a11y-high-contrast button:focus {
+	background-color: #ffff00 !important;
+	color: #000000 !important;
+	border-color: #ffff00 !important;
+}
+
+html.appp-a11y-high-contrast table,
+html.appp-a11y-high-contrast th,
+html.appp-a11y-high-contrast td {
+	border: 2px solid #ffffff !important;
+}
+
+html.appp-a11y-high-contrast blockquote {
+	border-left: 4px solid #ffff00 !important;
+}
+
+html.appp-a11y-high-contrast code,
+html.appp-a11y-high-contrast pre {
+	background-color: #000000 !important;
+	color: #ffffff !important;
+	border: 1px solid #ffffff !important;
+}
+
+html.appp-a11y-high-contrast img {
+	filter: grayscale(100%) contrast(120%);
+}
+
+html.appp-a11y-high-contrast *:focus-visible {
+	outline: 3px solid #ffff00 !important;
+	outline-offset: 2px !important;
+}
+
+/* --------------------------------------------------------------------------
+   12. Monochrome — Converts the site to black and white.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-monochrome {
+	filter: grayscale(100%) !important;
+}
+
+html.appp-a11y-monochrome img,
+html.appp-a11y-monochrome video,
+html.appp-a11y-monochrome iframe,
+html.appp-a11y-monochrome canvas,
+html.appp-a11y-monochrome svg {
+	filter: grayscale(100%) !important;
+}
+
+/* --------------------------------------------------------------------------
+   13. Saturation — Adjusts color saturation for better visual comfort.
+      Three levels are cycled: low (25%), medium (100%), high (200%).
+      Default toggle enables low saturation. Additional clicks can cycle.
+   -------------------------------------------------------------------------- */
+
+html.appp-a11y-saturation {
+	filter: saturate(25%) !important;
+}
+
+html.appp-a11y-saturation img,
+html.appp-a11y-saturation video,
+html.appp-a11y-saturation iframe,
+html.appp-a11y-saturation canvas {
+	filter: saturate(25%) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Conflicting option handling
+   --------------------------------------------------------------------------
+   When multiple color/contrast options are enabled, the last one in the
+   cascade wins. Dark/Light/High contrast are mutually exclusive in
+   practice — the user should only enable one at a time.
+   -------------------------------------------------------------------------- */

@@ -1,0 +1,8 @@
+/**
+ * Accessibility Button — Editor Styles
+ */
+
+.appp-a11y-block-preview {
+	pointer-events: none;
+	user-select: none;
+}

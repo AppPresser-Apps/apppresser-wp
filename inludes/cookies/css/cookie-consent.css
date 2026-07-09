@@ -1,0 +1,363 @@
+/* ==========================================================================
+   Cookie Consent Banner
+   ========================================================================== */
+
+:root {
+	--apppresser-cookie-bg: #ffffff;
+	--apppresser-cookie-text: #1a1a1a;
+	--apppresser-cookie-accent: #005a9c;
+	--apppresser-cookie-accent-hover: #004a82;
+	--apppresser-cookie-border: #e0e0e0;
+	--apppresser-cookie-radius: 8px;
+	--apppresser-cookie-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+	--apppresser-cookie-z: 999999;
+}
+
+/* --------------------------------------------------------------------------
+   Banner Container
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-banner {
+	position: fixed;
+	z-index: var(--apppresser-cookie-z);
+	max-width: 420px;
+	width: calc(100% - 32px);
+	background: var(--apppresser-cookie-bg);
+	color: var(--apppresser-cookie-text);
+	border-radius: var(--apppresser-cookie-radius);
+	box-shadow: var(--apppresser-cookie-shadow);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+	display: none;
+	animation: apppresserCookieFadeIn 0.3s ease;
+}
+
+.apppresser-cookie-banner.is-visible {
+	display: block;
+}
+
+@keyframes apppresserCookieFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Positions */
+.apppresser-cookie-banner--left_bottom {
+	left: 16px;
+	bottom: 16px;
+}
+
+.apppresser-cookie-banner--right_bottom {
+	right: 16px;
+	bottom: 16px;
+}
+
+.apppresser-cookie-banner--left_top {
+	left: 16px;
+	top: 16px;
+}
+
+.apppresser-cookie-banner--right_top {
+	right: 16px;
+	top: 16px;
+}
+
+/* --------------------------------------------------------------------------
+   Banner Inner
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-banner__inner {
+	padding: 20px 24px;
+	position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   Close Button
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-banner__close {
+	position: absolute;
+	top: 8px;
+	right: 12px;
+	background: none;
+	border: none;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	color: #666;
+	padding: 4px 8px;
+	border-radius: 4px;
+	transition: color 0.2s, background 0.2s;
+}
+
+.apppresser-cookie-banner__close:hover {
+	color: #1a1a1a;
+	background: #f0f0f0;
+}
+
+/* --------------------------------------------------------------------------
+   Content
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-banner__message {
+	margin-bottom: 12px;
+	padding-right: 24px; /* space for close button */
+}
+
+.apppresser-cookie-banner__message p {
+	margin: 0 0 8px;
+}
+
+.apppresser-cookie-banner__message p:last-child {
+	margin-bottom: 0;
+}
+
+.apppresser-cookie-banner__policy-link {
+	margin: 0 0 16px;
+	font-size: 13px;
+}
+
+.apppresser-cookie-banner__policy-link a {
+	color: var(--apppresser-cookie-accent);
+	text-decoration: underline;
+}
+
+.apppresser-cookie-banner__policy-link a:hover {
+	color: var(--apppresser-cookie-accent-hover);
+}
+
+/* --------------------------------------------------------------------------
+   Action Buttons
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-banner__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.apppresser-cookie-banner__btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 18px;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	border: 2px solid transparent;
+	transition: background 0.2s, border-color 0.2s, color 0.2s;
+	white-space: nowrap;
+}
+
+.apppresser-cookie-banner__btn--accept {
+	background: var(--apppresser-cookie-accent);
+	color: #fff;
+	border-color: var(--apppresser-cookie-accent);
+}
+
+.apppresser-cookie-banner__btn--accept:hover {
+	background: var(--apppresser-cookie-accent-hover);
+	border-color: var(--apppresser-cookie-accent-hover);
+}
+
+.apppresser-cookie-banner__btn--reject {
+	background: transparent;
+	color: var(--apppresser-cookie-text);
+	border-color: var(--apppresser-cookie-border);
+}
+
+.apppresser-cookie-banner__btn--reject:hover {
+	background: #f5f5f5;
+}
+
+.apppresser-cookie-banner__btn--settings {
+	background: transparent;
+	color: var(--apppresser-cookie-accent);
+	border-color: var(--apppresser-cookie-accent);
+}
+
+.apppresser-cookie-banner__btn--settings:hover {
+	background: rgba(0, 90, 156, 0.05);
+}
+
+/* --------------------------------------------------------------------------
+   Preferences Panel
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-preferences {
+	display: none;
+	border-top: 1px solid var(--apppresser-cookie-border);
+}
+
+.apppresser-cookie-preferences.is-visible {
+	display: block;
+	animation: apppresserCookieFadeIn 0.3s ease;
+}
+
+.apppresser-cookie-preferences__inner {
+	padding: 20px 24px;
+}
+
+.apppresser-cookie-preferences__title {
+	margin: 0 0 8px;
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.apppresser-cookie-preferences__intro {
+	margin: 0 0 16px;
+	font-size: 13px;
+	color: #666;
+}
+
+/* --------------------------------------------------------------------------
+   Preference Categories
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-preferences__categories {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+.apppresser-cookie-pref-category {
+	padding: 12px;
+	border: 1px solid var(--apppresser-cookie-border);
+	border-radius: 6px;
+}
+
+.apppresser-cookie-pref-category__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 4px;
+}
+
+.apppresser-cookie-pref-category__header h4 {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.apppresser-cookie-pref-category__desc {
+	margin: 0;
+	font-size: 12px;
+	color: #666;
+}
+
+/* --------------------------------------------------------------------------
+   Toggle Switch
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-toggle {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+}
+
+.apppresser-cookie-toggle--disabled {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+.apppresser-cookie-toggle input {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.apppresser-cookie-toggle__slider {
+	position: relative;
+	display: inline-block;
+	width: 40px;
+	height: 22px;
+	background: #ccc;
+	border-radius: 11px;
+	transition: background 0.2s;
+	flex-shrink: 0;
+}
+
+.apppresser-cookie-toggle__slider::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border-radius: 50%;
+	transition: transform 0.2s;
+}
+
+.apppresser-cookie-toggle input:checked + .apppresser-cookie-toggle__slider {
+	background: var(--apppresser-cookie-accent);
+}
+
+.apppresser-cookie-toggle input:checked + .apppresser-cookie-toggle__slider::after {
+	transform: translateX(18px);
+}
+
+.apppresser-cookie-toggle__label {
+	font-size: 12px;
+	color: #666;
+}
+
+/* --------------------------------------------------------------------------
+   Preferences Actions
+   -------------------------------------------------------------------------- */
+
+.apppresser-cookie-preferences__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.apppresser-cookie-preferences__policy-link {
+	margin: 0;
+	font-size: 13px;
+}
+
+.apppresser-cookie-preferences__policy-link a {
+	color: var(--apppresser-cookie-accent);
+	text-decoration: underline;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+	.apppresser-cookie-banner {
+		max-width: none;
+		width: calc(100% - 16px);
+		left: 8px !important;
+		right: 8px !important;
+		bottom: 8px !important;
+		top: auto !important;
+	}
+
+	.apppresser-cookie-banner__actions {
+		flex-direction: column;
+	}
+
+	.apppresser-cookie-banner__btn {
+		width: 100%;
+	}
+
+	.apppresser-cookie-preferences__actions {
+		flex-direction: column;
+	}
+}

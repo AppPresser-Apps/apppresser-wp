@@ -1,0 +1,51 @@
+/* Fill the full admin content area. */
+#apppresser-accessibility-root,
+#apppresser-cookies-root {
+	margin: 40px 30px;
+}
+
+body.settings_page_apppresser-accessibility .components-panel,
+body.settings_page_apppresser-cookies .components-panel {
+	max-width: 740px;
+	margin: 0 auto;
+}
+
+body.settings_page_apppresser-accessibility #wpcontent,
+body.settings_page_apppresser-cookies #wpcontent {
+	padding-left: 0;
+}
+
+.plugin-header {
+	background-color: #ffffff;
+	padding: 20px;
+	border-bottom: 1px solid #e0e0e0;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.plugin-header-logo {
+	width: 50px;
+	height: auto;
+}
+
+.components-panel {
+    background-color: transparent;
+    border: none;
+}
+
+
+.components-panel__body {
+	margin-bottom: 30px;
+	background-color: #ffffff;
+	border: 1px solid #e0e0e0;
+}
+
+.components-panel__row  {
+    padding-top: 10px;
+    border-top: 1px solid #e9eaeb;
+}
+
+.components-panel__row:first-of-type {
+    border-top: none;
+}

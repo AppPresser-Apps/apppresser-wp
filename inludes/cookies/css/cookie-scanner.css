@@ -1,0 +1,372 @@
+/* ==========================================================================
+   Cookie Scanner - Admin Styles
+   ========================================================================== */
+
+.apppresser-cookie-scanner-wrap {
+	max-width: 960px;
+}
+
+.apppresser-cookie-scanner-wrap .postbox-header .hndle {
+	padding-left: 12px;
+	padding-right: 12px;
+}
+
+.apppresser-cookie-table {
+	margin-top: 8px;
+}
+
+.apppresser-cookie-table th,
+.apppresser-cookie-table td {
+	vertical-align: middle;
+}
+
+.apppresser-cookie-table .cookie-name {
+	width: 18%;
+}
+
+.apppresser-cookie-table .cookie-domain {
+	width: 15%;
+}
+
+.apppresser-cookie-table .cookie-duration {
+	width: 10%;
+}
+
+.apppresser-cookie-table .cookie-category {
+	width: 10%;
+}
+
+.apppresser-cookie-table .cookie-desc {
+	width: 30%;
+}
+
+.apppresser-cookie-table .cookie-actions {
+	width: 17%;
+	white-space: nowrap;
+}
+
+.apppresser-cookie-table .cookie-desc-text {
+	display: block;
+	max-width: 250px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.apppresser-cookie-table .cookie-name-input,
+.apppresser-cookie-table .cookie-domain-input,
+.apppresser-cookie-table .cookie-duration-input,
+.apppresser-cookie-table .cookie-category-input,
+.apppresser-cookie-table .cookie-desc-input {
+	width: 100%;
+}
+
+.apppresser-cookie-table .cookie-desc-input {
+	resize: vertical;
+	min-height: 40px;
+}
+
+.apppresser-cookie-table .hidden {
+	display: none;
+}
+
+.apppresser-cookie-table tr.is-editing .cookie-name-text,
+.apppresser-cookie-table tr.is-editing .cookie-domain-text,
+.apppresser-cookie-table tr.is-editing .cookie-duration-text,
+.apppresser-cookie-table tr.is-editing .cookie-category-text,
+.apppresser-cookie-table tr.is-editing .cookie-desc-text {
+	display: none;
+}
+
+.apppresser-cookie-table tr.is-editing .cookie-name-input,
+.apppresser-cookie-table tr.is-editing .cookie-domain-input,
+.apppresser-cookie-table tr.is-editing .cookie-duration-input,
+.apppresser-cookie-table tr.is-editing .cookie-category-input,
+.apppresser-cookie-table tr.is-editing .cookie-desc-input {
+	display: block;
+}
+
+.apppresser-cookie-table tr.is-editing .cookie-edit-btn,
+.apppresser-cookie-table tr.is-editing .cookie-delete-btn {
+	display: none;
+}
+
+.apppresser-cookie-table tr.is-editing .cookie-save-btn,
+.apppresser-cookie-table tr.is-editing .cookie-cancel-btn {
+	display: inline-block;
+}
+
+.apppresser-cookie-table .cookie-save-btn,
+.apppresser-cookie-table .cookie-cancel-btn {
+	display: none;
+}
+
+/* Inline notice */
+.apppresser-cookie-scanner-wrap .notice {
+	margin: 12px 0 0;
+}
+
+/* ==========================================================================
+   Frontend Cookie Policy Table
+   ========================================================================== */
+
+.apppresser-cookie-policy {
+	max-width: 860px;
+	margin: 0 auto;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, sans-serif;
+	font-size: 15px;
+	line-height: 1.7;
+	color: #1e1e1e;
+}
+
+.apppresser-cookie-policy__category {
+	margin-bottom: 48px;
+	background: #fff;
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+.apppresser-cookie-policy__cat-title {
+	font-size: 18px;
+	font-weight: 700;
+	margin: 0;
+	padding: 20px 28px;
+	background: #f9fafb;
+	border-bottom: 1px solid #e5e7eb;
+	color: #111827;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.apppresser-cookie-policy__cat-title::before {
+	content: "";
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+/* Category color dots */
+.apppresser-cookie-policy__category:first-child .apppresser-cookie-policy__cat-title::before {
+	background: #059669; /* essential = green */
+}
+
+.apppresser-cookie-policy__category:nth-child(2) .apppresser-cookie-policy__cat-title::before {
+	background: #2563eb; /* analytics = blue */
+}
+
+.apppresser-cookie-policy__category:nth-child(3) .apppresser-cookie-policy__cat-title::before {
+	background: #d97706; /* marketing = amber */
+}
+
+.apppresser-cookie-policy__cat-desc {
+	margin: 0;
+	padding: 20px;
+	color: #6b7280;
+	font-size: 14px;
+}
+
+.apppresser-cookie-policy__table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0;
+	font-size: 14px;
+	margin-top: 0;
+}
+
+.apppresser-cookie-policy__table thead th {
+	padding: 16px 28px;
+	text-align: left;
+	font-weight: 700;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: #6b7280;
+	background: #f9fafb;
+	border-bottom: 1px solid #e5e7eb;
+	border-top: 1px solid #e5e7eb;
+	white-space: nowrap;
+}
+
+.apppresser-cookie-policy__table tbody td {
+	padding: 20px 28px;
+	border-bottom: 1px solid #f3f4f6;
+	vertical-align: top;
+	transition: background-color 0.15s ease;
+}
+
+.apppresser-cookie-policy__table tbody tr:last-child td {
+	border-bottom: none;
+	padding-bottom: 24px;
+}
+
+.apppresser-cookie-policy__table tbody tr:first-child td {
+	padding-top: 24px;
+}
+
+.apppresser-cookie-policy__table code {
+	background: #f9fafb;
+	color: #1f2937;
+	padding: 5px 10px;
+	border-radius: 5px;
+	font-size: 13px;
+	font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+	word-break: break-all;
+	white-space: nowrap;
+	border: 1px solid #e5e7eb;
+}
+
+/* Column widths */
+.apppresser-cookie-policy__table th:first-child,
+.apppresser-cookie-policy__table td:first-child {
+	width: 22%;
+}
+
+.apppresser-cookie-policy__table th:nth-child(2),
+.apppresser-cookie-policy__table td:nth-child(2) {
+	width: 18%;
+}
+
+.apppresser-cookie-policy__table th:nth-child(3),
+.apppresser-cookie-policy__table td:nth-child(3) {
+	width: 14%;
+}
+
+.apppresser-cookie-policy__table th:nth-child(4),
+.apppresser-cookie-policy__table td:nth-child(4) {
+	width: 46%;
+}
+
+/* ==========================================================================
+   Manage Preferences Button
+   ========================================================================== */
+
+.apppresser-cookie-policy__manage {
+	text-align: center;
+	margin-top: 32px;
+}
+
+.apppresser-cookie-policy__manage-btn {
+	display: inline-block;
+	padding: 14px 32px;
+	font-size: 15px;
+	font-weight: 600;
+	font-family: inherit;
+	color: #fff;
+	background: #1e3a5f;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.apppresser-cookie-policy__manage-btn:hover {
+	background: #152d4a;
+	transform: translateY(-1px);
+}
+
+.apppresser-cookie-policy__manage-btn:active {
+	transform: translateY(0);
+}
+
+/* Standalone [cookie_manage] shortcode button */
+.apppresser-cookie-manage-wrap {
+	display: block;
+}
+
+.apppresser-cookie-manage-btn {
+	display: inline-block;
+	padding: 12px 28px;
+	font-size: 14px;
+	font-weight: 600;
+	font-family: inherit;
+	line-height: 1.5;
+	color: #fff;
+	background: #1e3a5f;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.apppresser-cookie-manage-btn:hover {
+	background: #152d4a;
+	transform: translateY(-1px);
+}
+
+.apppresser-cookie-manage-btn:active {
+	transform: translateY(0);
+}
+
+/* ==========================================================================
+   Mobile Responsive
+   ========================================================================== */
+
+@media (max-width: 640px) {
+	.apppresser-cookie-policy {
+		font-size: 14px;
+	}
+
+	.apppresser-cookie-policy__category {
+		border-radius: 8px;
+		margin-bottom: 32px;
+	}
+
+	.apppresser-cookie-policy__cat-title {
+		font-size: 16px;
+		padding: 14px 16px;
+	}
+
+	.apppresser-cookie-policy__cat-desc {
+		padding: 12px 16px 0;
+	}
+
+	.apppresser-cookie-policy__table,
+	.apppresser-cookie-policy__table thead,
+	.apppresser-cookie-policy__table tbody,
+	.apppresser-cookie-policy__table th,
+	.apppresser-cookie-policy__table td,
+	.apppresser-cookie-policy__table tr {
+		display: block;
+	}
+
+	.apppresser-cookie-policy__table thead {
+		display: none;
+	}
+
+	.apppresser-cookie-policy__table tbody tr {
+		padding: 14px 16px;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.apppresser-cookie-policy__table tbody tr:last-child {
+		border-bottom: none;
+	}
+
+	.apppresser-cookie-policy__table tbody td {
+		padding: 6px 0;
+		border-bottom: none;
+		display: flex;
+		gap: 8px;
+		align-items: baseline;
+	}
+
+	.apppresser-cookie-policy__table tbody td::before {
+		content: attr(data-label);
+		font-weight: 600;
+		font-size: 11px;
+		color: #6b7280;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		flex-shrink: 0;
+		min-width: 80px;
+	}
+
+	.apppresser-cookie-policy__table code {
+		white-space: normal;
+		word-break: break-all;
+	}
+}

@@ -1,0 +1,448 @@
+/* ==========================================================================
+   Accessibility Modal
+   ========================================================================== */
+
+:root {
+	--appp-a11y-bg: #ffffff;
+	--appp-a11y-text: #1a1a1a;
+	--appp-a11y-accent: #005a9c;
+	--appp-a11y-accent-hover: #004a82;
+	--appp-a11y-border: #e0e0e0;
+	--appp-a11y-radius: 8px;
+	--appp-a11y-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+	--appp-a11y-z: 999998;
+}
+
+/* --------------------------------------------------------------------------
+   Trigger Button
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-trigger {
+	position: fixed;
+	z-index: var(--appp-a11y-z);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	padding: 12px 20px;
+	background: var(--appp-a11y-accent);
+	color: #fff;
+	border: none;
+	border-radius: 50px;
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: var(--appp-a11y-shadow);
+	transition: background 0.2s, transform 0.2s;
+}
+
+/* Positions */
+.appp-a11y-trigger--left_bottom {
+	left: 16px;
+	bottom: 16px;
+}
+
+.appp-a11y-trigger--right_bottom {
+	right: 16px;
+	bottom: 16px;
+}
+
+.appp-a11y-trigger--left_top {
+	left: 16px;
+	top: 16px;
+}
+
+.appp-a11y-trigger--right_top {
+	right: 16px;
+	top: 16px;
+}
+
+/* Icon-only round variant */
+.appp-a11y-trigger--icon-only {
+	border-radius: 50%;
+	gap: 0;
+}
+
+.appp-a11y-trigger--icon-only .appp-a11y-trigger__icon {
+	width: 100%;
+	height: 100%;
+}
+
+.appp-a11y-trigger--icon-only .appp-a11y-trigger__icon svg {
+	width: 100%;
+	height: 100%;
+}
+
+/* Sizes — icon-only */
+.appp-a11y-trigger--small.appp-a11y-trigger--icon-only {
+	width: 40px;
+	height: 40px;
+}
+
+.appp-a11y-trigger--medium.appp-a11y-trigger--icon-only {
+	width: 48px;
+	height: 48px;
+}
+
+.appp-a11y-trigger--large.appp-a11y-trigger--icon-only {
+	width: 56px;
+	height: 56px;
+}
+
+/* Sizes — with label */
+.appp-a11y-trigger--small:not(.appp-a11y-trigger--icon-only) {
+	font-size: 13px;
+}
+
+.appp-a11y-trigger--medium:not(.appp-a11y-trigger--icon-only) {
+	font-size: 14px;
+}
+
+.appp-a11y-trigger--large:not(.appp-a11y-trigger--icon-only) {
+	font-size: 16px;
+}
+
+/* Sizes — icon inside labeled button */
+.appp-a11y-trigger--small:not(.appp-a11y-trigger--icon-only) .appp-a11y-trigger__icon {
+	width: 22px;
+	height: 22px;
+}
+
+.appp-a11y-trigger--small:not(.appp-a11y-trigger--icon-only) .appp-a11y-trigger__icon svg {
+	width: 20px;
+	height: 20px;
+}
+
+.appp-a11y-trigger--medium:not(.appp-a11y-trigger--icon-only) .appp-a11y-trigger__icon {
+	width: 26px;
+	height: 26px;
+}
+
+.appp-a11y-trigger--medium:not(.appp-a11y-trigger--icon-only) .appp-a11y-trigger__icon svg {
+	width: 24px;
+	height: 24px;
+}
+
+.appp-a11y-trigger--large:not(.appp-a11y-trigger--icon-only) .appp-a11y-trigger__icon {
+	width: 30px;
+	height: 30px;
+}
+
+.appp-a11y-trigger--large:not(.appp-a11y-trigger--icon-only) .appp-a11y-trigger__icon svg {
+	width: 28px;
+	height: 28px;
+}
+
+.appp-a11y-trigger:hover {
+	background: var(--appp-a11y-accent-hover);
+	transform: translateY(-1px);
+}
+
+.appp-a11y-trigger:focus-visible {
+	outline: 2px solid var(--appp-a11y-accent);
+	outline-offset: 2px;
+}
+
+.appp-a11y-trigger__icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	flex-shrink: 0;
+}
+
+.appp-a11y-trigger__icon svg {
+	width: 20px;
+	height: 20px;
+	fill: currentColor;
+}
+
+/* --------------------------------------------------------------------------
+   Modal Overlay
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: calc(var(--appp-a11y-z) + 1);
+	background: rgba(0, 0, 0, 0.5);
+	display: none;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+}
+
+.appp-a11y-overlay.is-visible {
+	display: flex;
+}
+
+/* --------------------------------------------------------------------------
+   Modal
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-modal {
+	position: relative;
+	width: 100%;
+	max-width: 480px;
+	max-height: 80vh;
+	overflow-y: auto;
+	background: var(--appp-a11y-bg);
+	color: var(--appp-a11y-text);
+	border-radius: var(--appp-a11y-radius);
+	box-shadow: var(--appp-a11y-shadow);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-size: 14px;
+	line-height: 1.5;
+	animation: apppA11yFadeIn 0.3s ease;
+}
+
+@keyframes apppA11yFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* --------------------------------------------------------------------------
+   Modal Header
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-modal__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 20px 24px 0;
+}
+
+.appp-a11y-modal__title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 700;
+}
+
+.appp-a11y-modal__close {
+	background: none;
+	border: none;
+	font-size: 22px;
+	line-height: 1;
+	cursor: pointer;
+	color: #666;
+	padding: 4px 8px;
+	border-radius: 4px;
+	transition: color 0.2s, background 0.2s;
+	flex-shrink: 0;
+}
+
+.appp-a11y-modal__close:hover {
+	color: #1a1a1a;
+	background: #f0f0f0;
+}
+
+/* --------------------------------------------------------------------------
+   Modal Body
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-modal__body {
+	padding: 16px 24px 20px;
+}
+
+.appp-a11y-modal__intro {
+	margin: 0 0 16px;
+	font-size: 13px;
+	color: #666;
+}
+
+/* --------------------------------------------------------------------------
+   Settings List
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-settings {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-bottom: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Setting Item
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-setting {
+	padding: 12px;
+	border: 1px solid var(--appp-a11y-border);
+	border-radius: 6px;
+}
+
+.appp-a11y-setting__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 4px;
+}
+
+.appp-a11y-setting__label {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.appp-a11y-setting__help {
+	margin: 0;
+	font-size: 12px;
+	color: #666;
+}
+
+/* --------------------------------------------------------------------------
+   Toggle Switch
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-toggle {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+}
+
+.appp-a11y-toggle input {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.appp-a11y-toggle__slider {
+	position: relative;
+	display: inline-block;
+	width: 40px;
+	height: 22px;
+	background: #ccc;
+	border-radius: 11px;
+	transition: background 0.2s;
+	flex-shrink: 0;
+}
+
+.appp-a11y-toggle__slider::after {
+	content: "";
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 16px;
+	height: 16px;
+	background: #fff;
+	border-radius: 50%;
+	transition: transform 0.2s;
+}
+
+.appp-a11y-toggle input:checked + .appp-a11y-toggle__slider {
+	background: var(--appp-a11y-accent);
+}
+
+.appp-a11y-toggle input:checked + .appp-a11y-toggle__slider::after {
+	transform: translateX(18px);
+}
+
+/* --------------------------------------------------------------------------
+   Modal Footer / Actions
+   -------------------------------------------------------------------------- */
+
+.appp-a11y-modal__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding: 0 24px 20px;
+}
+
+.appp-a11y-modal__btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 18px;
+	border-radius: 6px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	border: 2px solid transparent;
+	transition: background 0.2s, border-color 0.2s, color 0.2s;
+	white-space: nowrap;
+}
+
+.appp-a11y-modal__btn--save {
+	background: var(--appp-a11y-accent);
+	color: #fff;
+	border-color: var(--appp-a11y-accent);
+}
+
+.appp-a11y-modal__btn--save:hover {
+	background: var(--appp-a11y-accent-hover);
+	border-color: var(--appp-a11y-accent-hover);
+}
+
+.appp-a11y-modal__btn--reset {
+	background: transparent;
+	color: var(--appp-a11y-text);
+	border-color: var(--appp-a11y-border);
+}
+
+.appp-a11y-modal__btn--reset:hover {
+	background: #f5f5f5;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+
+	@media (max-width: 480px) {
+		.appp-a11y-trigger {
+			padding: 10px 16px;
+			font-size: 13px;
+		}
+
+		.appp-a11y-trigger--left_bottom,
+		.appp-a11y-trigger--right_bottom {
+			bottom: 8px;
+		}
+
+		.appp-a11y-trigger--left_top,
+		.appp-a11y-trigger--right_top {
+			top: 8px;
+		}
+
+		.appp-a11y-trigger--left_bottom,
+		.appp-a11y-trigger--left_top {
+			left: 8px;
+		}
+
+		.appp-a11y-trigger--right_bottom,
+		.appp-a11y-trigger--right_top {
+			right: 8px;
+		}
+
+	.appp-a11y-modal {
+		max-width: none;
+		max-height: 80vh;
+	}
+
+	.appp-a11y-modal__header {
+		padding: 16px 16px 0;
+	}
+
+	.appp-a11y-modal__body {
+		padding: 12px 16px 16px;
+	}
+
+	.appp-a11y-modal__actions {
+		flex-direction: column;
+		padding: 0 16px 16px;
+	}
+
+	.appp-a11y-modal__btn {
+		width: 100%;
+	}
+}

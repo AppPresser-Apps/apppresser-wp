@@ -1,0 +1,52 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "apppresser/accessibility-button",
+	"title": "Accessibility Button",
+	"category": "widgets",
+	"icon": "universal-access-alt",
+	"description": "Adds a floating accessibility button that opens a settings modal for users to customize their browsing experience.",
+	"keywords": [ "accessibility", "a11y", "contrast", "font", "readable" ],
+	"version": "1.0.0",
+	"textdomain": "apppresser-wp",
+	"attributes": {
+		"label": {
+			"type": "string",
+			"default": "Accessibility"
+		},
+		"placement": {
+			"type": "string",
+			"default": "left_bottom",
+			"enum": [ "left_bottom", "right_bottom", "left_top", "right_top" ]
+		},
+		"icon": {
+			"type": "string",
+			"default": "accessibility",
+			"enum": [ "accessibility", "eye", "contrast", "text", "none" ]
+		},
+		"size": {
+			"type": "string",
+			"default": "medium",
+			"enum": [ "small", "medium", "large" ]
+		},
+		"backgroundColor": {
+			"type": "string",
+			"default": ""
+		},
+		"padding": {
+			"type": "number",
+			"default": 3
+		}
+	},
+	"supports": {
+		"align": false,
+		"anchor": false,
+		"className": false,
+		"customClassName": false,
+		"html": false,
+		"inserter": true,
+		"multiple": false,
+		"reusable": false
+	},
+	"render": "file:./render.php"
+}
