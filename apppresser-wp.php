@@ -52,6 +52,10 @@ new AppPresser_Maintenance();
 require_once APPRESSER_WP_DIR . 'includes/social-share/class-social-share.php';
 new AppPresser_Social_Share();
 
+// Load pop-ups module.
+require_once APPRESSER_WP_DIR . 'includes/pop-ups/class-pop-ups.php';
+new AppPresser_Pop_Ups();
+
 // Load options module.
 require_once APPRESSER_WP_DIR . 'includes/options/class-options.php';
 new AppPresser_Options();

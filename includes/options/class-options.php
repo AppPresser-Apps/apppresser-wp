@@ -41,6 +41,10 @@ class AppPresser_Options {
 			'label' => 'Enable LLM .md URLs',
 			'help'  => 'Allow posts and pages to be accessed as Markdown by appending .md to the URL (e.g. /hello-world.md). After enabling, go to Settings > Permalinks and click Save Changes.',
 		),
+		'header_banner'                 => array(
+			'label' => 'Enable Header Banner',
+			'help'  => 'Display a thin banner above the site header. Use the Banner Content panel below to edit the banner text.',
+		),
 	);
 
 	/**
@@ -50,6 +54,9 @@ class AppPresser_Options {
 		add_action( 'admin_menu', array( $this, 'add_admin_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_ajax_apppresser_options_toggle', array( $this, 'handle_toggle' ) );
+		add_action( 'wp_ajax_apppresser_options_save_banner', array( $this, 'handle_save_banner' ) );
+		add_action( 'wp_ajax_apppresser_options_save_banner_color', array( $this, 'handle_save_banner_color' ) );
+		add_action( 'wp_ajax_apppresser_options_save_banner_text_color', array( $this, 'handle_save_banner_text_color' ) );
 
 		// Apply comment disabling if enabled.
 		if ( get_option( 'apppresser_disable_comments_enabled', false ) ) {
@@ -66,6 +73,11 @@ class AppPresser_Options {
 			add_action( 'init', array( $this, 'add_markdown_rewrite_rule' ) );
 			add_filter( 'query_vars', array( $this, 'add_markdown_query_var' ) );
 			add_action( 'template_redirect', array( $this, 'handle_markdown_request' ) );
+		}
+
+		// Apply header banner if enabled.
+		if ( get_option( 'apppresser_header_banner_enabled', false ) ) {
+			add_action( 'wp_body_open', array( $this, 'render_header_banner' ) );
 		}
 	}
 
@@ -114,10 +126,13 @@ class AppPresser_Options {
 				'apppresser-options',
 				'apppresserOptions',
 				array(
-					'settings' => $settings,
-					'options'  => $this->options,
-					'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-					'nonce'    => wp_create_nonce( 'apppresser_options_nonce' ),
+					'settings'        => $settings,
+					'options'         => $this->options,
+					'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
+					'nonce'           => wp_create_nonce( 'apppresser_options_nonce' ),
+					'bannerContent'   => get_option( 'apppresser_header_banner_content', '' ),
+					'bannerColor'     => get_option( 'apppresser_header_banner_color', '#1e1e1e' ),
+					'bannerTextColor' => get_option( 'apppresser_header_banner_text_color', '#ffffff' ),
 				)
 			);
 
@@ -157,6 +172,108 @@ class AppPresser_Options {
 				'enabled' => $enabled,
 			)
 		);
+	}
+
+	/**
+	 * AJAX handler for saving banner content.
+	 */
+	public function handle_save_banner() {
+		check_ajax_referer( 'apppresser_options_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$content = isset( $_POST['content'] ) ? wp_kses_post( wp_unslash( $_POST['content'] ) ) : '';
+
+		update_option( 'apppresser_header_banner_content', $content );
+
+		wp_send_json_success(
+			array(
+				'content' => $content,
+			)
+		);
+	}
+
+	/**
+	 * AJAX handler for saving banner background color.
+	 */
+	public function handle_save_banner_color() {
+		check_ajax_referer( 'apppresser_options_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$color = isset( $_POST['color'] ) ? sanitize_hex_color( wp_unslash( $_POST['color'] ) ) : '#1e1e1e';
+
+		if ( ! $color ) {
+			$color = '#1e1e1e';
+		}
+
+		update_option( 'apppresser_header_banner_color', $color );
+
+		wp_send_json_success(
+			array(
+				'color' => $color,
+			)
+		);
+	}
+
+	/**
+	 * AJAX handler for saving banner text color.
+	 */
+	public function handle_save_banner_text_color() {
+		check_ajax_referer( 'apppresser_options_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$color = isset( $_POST['color'] ) ? sanitize_hex_color( wp_unslash( $_POST['color'] ) ) : '#ffffff';
+
+		if ( ! $color ) {
+			$color = '#ffffff';
+		}
+
+		update_option( 'apppresser_header_banner_text_color', $color );
+
+		wp_send_json_success(
+			array(
+				'color' => $color,
+			)
+		);
+	}
+
+	/**
+	 * Render the header banner on the frontend.
+	 */
+	public function render_header_banner() {
+		$content = get_option( 'apppresser_header_banner_content', '' );
+
+		if ( empty( $content ) ) {
+			return;
+		}
+
+		$bg_color   = get_option( 'apppresser_header_banner_color', '#1e1e1e' );
+		$text_color = get_option( 'apppresser_header_banner_text_color', '#ffffff' );
+		?>
+		<style>
+			.apppresser-header-banner a,
+			.apppresser-header-banner a:link,
+			.apppresser-header-banner a:visited,
+			.apppresser-header-banner a:hover,
+			.apppresser-header-banner a:active {
+				color: <?php echo esc_attr( $text_color ); ?>;
+				text-decoration: underline;
+			}
+		</style>
+		<div class="apppresser-header-banner" style="background:<?php echo esc_attr( $bg_color ); ?>;color:<?php echo esc_attr( $text_color ); ?>;text-align:center;padding:6px 16px;font-size:14px;line-height:1.5;position:relative;z-index:9999;">
+			<div class="apppresser-header-banner__content">
+				<?php echo wp_kses_post( $content ); ?>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**

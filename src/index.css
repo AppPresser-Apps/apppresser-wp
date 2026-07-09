@@ -1,26 +1,41 @@
 /* Fill the full admin content area. */
 #apppresser-accessibility-root,
 #apppresser-cookies-root,
+#apppresser-cookie-scanner-root,
 #apppresser-maintenance-root,
 #apppresser-social-share-root,
-#apppresser-options-root {
+#apppresser-options-root,
+#apppresser-pop-ups-root {
 	margin: 40px 30px;
 }
 
 body.settings_page_apppresser-accessibility .components-panel,
 body.settings_page_apppresser-cookies .components-panel,
+body.settings_page_apppresser-cookie-scanner .components-panel,
 body.settings_page_apppresser-maintenance .components-panel,
 body.settings_page_apppresser-social-share .components-panel,
-body.settings_page_apppresser-options .components-panel {
+body.settings_page_apppresser-options .components-panel,
+body.settings_page_apppresser-pop-ups .components-panel {
 	max-width: 740px;
 	margin: 0 auto;
 }
 
+/* Hide WordPress admin notices on all AppPresser settings pages. */
+body[class*="settings_page_apppresser-"] .notice,
+body[class*="settings_page_apppresser-"] .update-nag,
+body[class*="settings_page_apppresser-"] .updated,
+body[class*="settings_page_apppresser-"] .error,
+body[class*="settings_page_apppresser-"] #setting-error-settings_updated {
+	display: none;
+}
+
 body.settings_page_apppresser-accessibility #wpcontent,
 body.settings_page_apppresser-cookies #wpcontent,
+body.settings_page_apppresser-cookie-scanner #wpcontent,
 body.settings_page_apppresser-maintenance #wpcontent,
 body.settings_page_apppresser-social-share #wpcontent,
-body.settings_page_apppresser-options #wpcontent {
+body.settings_page_apppresser-options #wpcontent,
+body.settings_page_apppresser-pop-ups #wpcontent {
 	padding-left: 0;
 }
 
