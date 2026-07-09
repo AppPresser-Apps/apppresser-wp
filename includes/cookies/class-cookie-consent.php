@@ -64,14 +64,14 @@ class AppPresser_Cookie_Consent {
 
 		wp_enqueue_style(
 			'apppresser-cookie-consent',
-			APPRESSER_WP_URL . '/inludes/cookies/css/cookie-consent.css',
+			APPRESSER_WP_URL . '/includes/cookies/css/cookie-consent.css',
 			array(),
 			'1.0.0'
 		);
 
 		wp_enqueue_script(
 			'apppresser-cookie-consent',
-			APPRESSER_WP_URL . '/inludes/cookies/js/cookie-consent.js',
+			APPRESSER_WP_URL . '/includes/cookies/js/cookie-consent.js',
 			array(),
 			'1.0.0',
 			true

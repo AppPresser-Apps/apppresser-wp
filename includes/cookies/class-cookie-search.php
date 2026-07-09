@@ -477,7 +477,7 @@ class AppPresser_Cookie_Search {
 	public function enqueue_frontend_assets() {
 		wp_enqueue_style(
 			'apppresser-cookie-policy',
-			APPRESSER_WP_URL . '/inludes/cookies/css/cookie-scanner.css',
+			APPRESSER_WP_URL . '/includes/cookies/css/cookie-scanner.css',
 			array(),
 			'1.0.0'
 		);

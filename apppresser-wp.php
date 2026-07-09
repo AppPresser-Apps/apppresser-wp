@@ -29,17 +29,17 @@ define( 'APPRESSER_WP_SLUG', plugin_basename( __FILE__ ) );
 define( 'APPRESSER_WP_FILE', __FILE__ );
 
 // Load accessibility module.
-require_once APPRESSER_WP_DIR . 'inludes/accessibility/class-accessibility.php';
+require_once APPRESSER_WP_DIR . 'includes/accessibility/class-accessibility.php';
 new AppPresser_Accessibility();
 
 // Load cookies module.
-require_once APPRESSER_WP_DIR . 'inludes/cookies/class-cookies.php';
+require_once APPRESSER_WP_DIR . 'includes/cookies/class-cookies.php';
 new AppPresser_Cookies();
 
 // Load cookie consent banner.
-require_once APPRESSER_WP_DIR . 'inludes/cookies/class-cookie-consent.php';
+require_once APPRESSER_WP_DIR . 'includes/cookies/class-cookie-consent.php';
 new AppPresser_Cookie_Consent();
 
 // Load cookie scanner & shortcodes.
-require_once APPRESSER_WP_DIR . 'inludes/cookies/class-cookie-search.php';
+require_once APPRESSER_WP_DIR . 'includes/cookies/class-cookie-search.php';
 new AppPresser_Cookie_Search();
