@@ -5,7 +5,7 @@ import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Panel, PanelBody, PanelRow, ToggleControl } from '@wordpress/components';
 
-const { settings, buttons, ajaxUrl, nonce } = window.apppresserSocialShare || {};
+const { settings, buttons, colors: initialColors, ajaxUrl, nonce } = window.apppresserSocialShare || {};
 
 const SocialShareApp = () => {
 	const [ toggles, setToggles ] = useState( () => {
@@ -18,14 +18,40 @@ const SocialShareApp = () => {
 		return initial;
 	} );
 
-	const handleToggle = ( key, value ) => {
-		setToggles( ( prev ) => ( { ...prev, [ key ]: value } ) );
+	const [ colors, setColors ] = useState( () => {
+		const initial = {};
+		if ( buttons && initialColors ) {
+			Object.keys( buttons ).forEach( ( key ) => {
+				initial[ key ] = {
+					bg: initialColors[ key ]?.bg || buttons[ key ]?.bg_color || '#333333',
+					text: initialColors[ key ]?.text || buttons[ key ]?.text_color || '#ffffff',
+				};
+			} );
+		}
+		return initial;
+	} );
+
+	const handleChange = ( key, field, value ) => {
+		if ( field === 'enabled' ) {
+			setToggles( ( prev ) => ( { ...prev, [ key ]: value } ) );
+		} else {
+			setColors( ( prev ) => ( {
+				...prev,
+				[ key ]: { ...prev[ key ], [ field ]: value },
+			} ) );
+		}
 
 		const formData = new FormData();
 		formData.append( 'action', 'apppresser_social_share_toggle' );
 		formData.append( 'nonce', nonce );
 		formData.append( 'key', key );
-		formData.append( 'enabled', value ? '1' : '0' );
+		formData.append( 'field', field );
+
+		if ( field === 'enabled' ) {
+			formData.append( 'enabled', value ? '1' : '0' );
+		} else {
+			formData.append( 'value', value );
+		}
 
 		fetch( ajaxUrl, {
 			method: 'POST',
@@ -45,12 +71,36 @@ const SocialShareApp = () => {
 			>
 				{ Object.entries( buttons ).map( ( [ key, data ] ) => (
 					<PanelRow key={ key }>
-						<ToggleControl
-							label={ data.label }
-							help={ data.help }
-							checked={ toggles[ key ] || false }
-							onChange={ ( value ) => handleToggle( key, value ) }
-						/>
+						<div style={ { width: '100%' } }>
+							<ToggleControl
+								label={ data.label }
+								help={ data.help }
+								checked={ toggles[ key ] || false }
+								onChange={ ( value ) => handleChange( key, 'enabled', value ) }
+							/>
+							{ toggles[ key ] && colors[ key ] && (
+								<div style={ { display: 'flex', gap: '12px', marginTop: '8px', alignItems: 'center' } }>
+									<label style={ { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' } }>
+										{ __( 'Background', 'apppresser-wp' ) }
+										<input
+											type="color"
+											value={ colors[ key ].bg }
+											onChange={ ( e ) => handleChange( key, 'bg', e.target.value ) }
+											style={ { width: '32px', height: '32px', padding: '0', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' } }
+										/>
+									</label>
+									<label style={ { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' } }>
+										{ __( 'Text', 'apppresser-wp' ) }
+										<input
+											type="color"
+											value={ colors[ key ].text }
+											onChange={ ( e ) => handleChange( key, 'text', e.target.value ) }
+											style={ { width: '32px', height: '32px', padding: '0', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' } }
+										/>
+									</label>
+								</div>
+							) }
+						</div>
 					</PanelRow>
 				) ) }
 			</PanelBody>
