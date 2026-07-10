@@ -125,7 +125,7 @@ class AppPresser_Social_Share {
 			$button_order = get_option( 'apppresser_social_button_order', array_keys( $this->buttons ) );
 
 			foreach ( $this->buttons as $key => $data ) {
-				$settings[ $key ] = get_option( 'apppresser_social_' . $key . '_enabled', true );
+				$settings[ $key ] = get_option( 'apppresser_social_' . $key . '_enabled', '1' );
 				$colors[ $key ]   = array(
 					'bg'   => get_option( 'apppresser_social_' . $key . '_bg_color', $data['bg_color'] ),
 					'text' => get_option( 'apppresser_social_' . $key . '_text_color', $data['text_color'] ),
@@ -174,7 +174,7 @@ class AppPresser_Social_Share {
 		}
 
 		if ( 'enabled' === $field ) {
-			$enabled = isset( $_POST['enabled'] ) ? rest_sanitize_boolean( $_POST['enabled'] ) : false;
+			$enabled = isset( $_POST['enabled'] ) && '1' === $_POST['enabled'] ? '1' : '0';
 			update_option( 'apppresser_social_' . $key . '_enabled', $enabled );
 			wp_send_json_success(
 				array(
@@ -273,7 +273,7 @@ class AppPresser_Social_Share {
 				continue;
 			}
 
-			if ( ! get_option( 'apppresser_social_' . $key . '_enabled', true ) ) {
+			if ( '0' === get_option( 'apppresser_social_' . $key . '_enabled', '1' ) ) {
 				continue;
 			}
 

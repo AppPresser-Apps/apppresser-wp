@@ -19,8 +19,8 @@ const SocialShareApp = () => {
 		const initial = {};
 		if ( settings ) {
 			Object.keys( settings ).forEach( ( key ) => {
-				initial[ key ] = Boolean( settings[ key ] );
-			} );
+					initial[ key ] = settings[ key ] === '1' || settings[ key ] === true;
+				} );
 		}
 		return initial;
 	} );
