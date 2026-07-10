@@ -29,40 +29,46 @@ class AppPresser_Social_Share {
 	 * @var array<string, array{label: string, help: string, bg_color: string, text_color: string}>
 	 */
 	private $buttons = array(
-		'print'    => array(
+		'print'     => array(
 			'label'      => 'Print',
 			'help'       => 'Show a print button that opens the browser print dialog.',
 			'bg_color'   => '#333333',
 			'text_color' => '#ffffff',
 		),
-		'email'    => array(
+		'email'     => array(
 			'label'      => 'Email',
 			'help'       => 'Show an email sharing button.',
 			'bg_color'   => '#6c757d',
 			'text_color' => '#ffffff',
 		),
-		'facebook' => array(
+		'facebook'  => array(
 			'label'      => 'Facebook',
 			'help'       => 'Show a Facebook sharing button.',
 			'bg_color'   => '#1877F2',
 			'text_color' => '#ffffff',
 		),
-		'twitter'  => array(
+		'twitter'   => array(
 			'label'      => 'X (Twitter)',
 			'help'       => 'Show an X (Twitter) sharing button.',
 			'bg_color'   => '#000000',
 			'text_color' => '#ffffff',
 		),
-		'linkedin' => array(
+		'linkedin'  => array(
 			'label'      => 'LinkedIn',
 			'help'       => 'Show a LinkedIn sharing button.',
 			'bg_color'   => '#0A66C2',
 			'text_color' => '#ffffff',
 		),
-		'bluesky'  => array(
+		'bluesky'   => array(
 			'label'      => 'Bluesky',
 			'help'       => 'Show a Bluesky sharing button.',
 			'bg_color'   => '#1185FE',
+			'text_color' => '#ffffff',
+		),
+		'pinterest' => array(
+			'label'      => 'Pinterest',
+			'help'       => 'Show a Pinterest sharing button.',
+			'bg_color'   => '#E60023',
 			'text_color' => '#ffffff',
 		),
 	);
@@ -74,6 +80,7 @@ class AppPresser_Social_Share {
 		add_action( 'admin_menu', array( $this, 'add_admin_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_ajax_apppresser_social_share_toggle', array( $this, 'handle_toggle' ) );
+		add_action( 'wp_ajax_apppresser_social_share_order', array( $this, 'handle_order' ) );
 		add_shortcode( 'social_share', array( $this, 'render_shortcode' ) );
 	}
 
@@ -113,8 +120,10 @@ class AppPresser_Social_Share {
 				true
 			);
 
-			$settings = array();
-			$colors   = array();
+			$settings     = array();
+			$colors       = array();
+			$button_order = get_option( 'apppresser_social_button_order', array_keys( $this->buttons ) );
+
 			foreach ( $this->buttons as $key => $data ) {
 				$settings[ $key ] = get_option( 'apppresser_social_' . $key . '_enabled', true );
 				$colors[ $key ]   = array(
@@ -127,11 +136,12 @@ class AppPresser_Social_Share {
 				'apppresser-social-share',
 				'apppresserSocialShare',
 				array(
-					'settings' => $settings,
-					'buttons'  => $this->buttons,
-					'colors'   => $colors,
-					'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-					'nonce'    => wp_create_nonce( 'apppresser_social_share_nonce' ),
+					'settings'    => $settings,
+					'buttons'     => $this->buttons,
+					'colors'      => $colors,
+					'buttonOrder' => $button_order,
+					'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
+					'nonce'       => wp_create_nonce( 'apppresser_social_share_nonce' ),
 				)
 			);
 
@@ -192,6 +202,36 @@ class AppPresser_Social_Share {
 	}
 
 	/**
+	 * AJAX handler for saving button order.
+	 */
+	public function handle_order() {
+		check_ajax_referer( 'apppresser_social_share_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$raw_order = isset( $_POST['order'] ) ? json_decode( wp_unslash( $_POST['order'] ), true ) : array();
+
+		if ( ! is_array( $raw_order ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid order format.' ), 400 );
+		}
+
+		$order = array_values(
+			array_filter(
+				array_map( 'sanitize_key', $raw_order ),
+				function ( $key ) {
+					return array_key_exists( $key, $this->buttons );
+				}
+			)
+		);
+
+		update_option( 'apppresser_social_button_order', $order );
+
+		wp_send_json_success( array( 'order' => $order ) );
+	}
+
+	/**
 	 * Render the admin page content.
 	 */
 	public function render_page() {
@@ -214,54 +254,43 @@ class AppPresser_Social_Share {
 		$post_url   = urlencode( get_permalink() );
 		$post_title = urlencode( html_entity_decode( get_the_title(), ENT_QUOTES, 'UTF-8' ) );
 
-		$facebook_url = "https://www.facebook.com/sharer/sharer.php?u={$post_url}";
-		$twitter_url  = "https://twitter.com/intent/tweet?url={$post_url}&text={$post_title}";
-		$linkedin_url = "https://www.linkedin.com/sharing/share-offsite/?url={$post_url}";
-		$bluesky_url  = "https://bsky.app/intent/compose?text={$post_title}%20{$post_url}";
-		$email_url    = "mailto:?subject={$post_title}&body=Check out this post: {$post_url}";
+		$share_urls = array(
+			'print'     => 'javascript:window.print()',
+			'email'     => "mailto:?subject={$post_title}&body=Check out this post: {$post_url}",
+			'facebook'  => "https://www.facebook.com/sharer/sharer.php?u={$post_url}",
+			'twitter'   => "https://twitter.com/intent/tweet?url={$post_url}&text={$post_title}",
+			'linkedin'  => "https://www.linkedin.com/sharing/share-offsite/?url={$post_url}",
+			'bluesky'   => "https://bsky.app/intent/compose?text={$post_title}%20{$post_url}",
+			'pinterest' => "https://pinterest.com/pin/create/button/?url={$post_url}&description={$post_title}",
+		);
+
+		$button_order = get_option( 'apppresser_social_button_order', array_keys( $this->buttons ) );
 
 		$html = '<div class="custom-social-share" style="display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0; font-size: 0.8rem">';
 
-		// Print.
-		if ( get_option( 'apppresser_social_print_enabled', true ) ) {
-			$bg    = get_option( 'apppresser_social_print_bg_color', '#333333' );
-			$text  = get_option( 'apppresser_social_print_text_color', '#ffffff' );
-			$html .= '<a href="javascript:window.print()" style="padding: 8px 16px; background-color: ' . esc_attr( $bg ) . '; color: ' . esc_attr( $text ) . '; text-decoration: none; border-radius: 4px; cursor: pointer;">Print</a>';
-		}
+		foreach ( $button_order as $key ) {
+			if ( ! isset( $this->buttons[ $key ], $share_urls[ $key ] ) ) {
+				continue;
+			}
 
-		// Email.
-		if ( get_option( 'apppresser_social_email_enabled', true ) ) {
-			$bg    = get_option( 'apppresser_social_email_bg_color', '#6c757d' );
-			$text  = get_option( 'apppresser_social_email_text_color', '#ffffff' );
-			$html .= '<a href="' . esc_url( $email_url ) . '" style="padding: 8px 16px; background-color: ' . esc_attr( $bg ) . '; color: ' . esc_attr( $text ) . '; text-decoration: none; border-radius: 4px;">Email</a>';
-		}
+			if ( ! get_option( 'apppresser_social_' . $key . '_enabled', true ) ) {
+				continue;
+			}
 
-		// Facebook.
-		if ( get_option( 'apppresser_social_facebook_enabled', true ) ) {
-			$bg    = get_option( 'apppresser_social_facebook_bg_color', '#1877F2' );
-			$text  = get_option( 'apppresser_social_facebook_text_color', '#ffffff' );
-			$html .= '<a href="' . esc_url( $facebook_url ) . '" target="_blank" rel="noopener noreferrer" style="padding: 8px 16px; background-color: ' . esc_attr( $bg ) . '; color: ' . esc_attr( $text ) . '; text-decoration: none; border-radius: 4px;">Facebook</a>';
-		}
+			$bg    = get_option( 'apppresser_social_' . $key . '_bg_color', $this->buttons[ $key ]['bg_color'] );
+			$text  = get_option( 'apppresser_social_' . $key . '_text_color', $this->buttons[ $key ]['text_color'] );
+			$label = esc_html( $this->buttons[ $key ]['label'] );
+			$url   = $share_urls[ $key ];
 
-		// Twitter.
-		if ( get_option( 'apppresser_social_twitter_enabled', true ) ) {
-			$bg    = get_option( 'apppresser_social_twitter_bg_color', '#000000' );
-			$text  = get_option( 'apppresser_social_twitter_text_color', '#ffffff' );
-			$html .= '<a href="' . esc_url( $twitter_url ) . '" target="_blank" rel="noopener noreferrer" style="padding: 8px 16px; background-color: ' . esc_attr( $bg ) . '; color: ' . esc_attr( $text ) . '; text-decoration: none; border-radius: 4px;">X (Twitter)</a>';
-		}
+			$style = 'padding: 8px 16px; background-color: ' . esc_attr( $bg ) . '; color: ' . esc_attr( $text ) . '; text-decoration: none; border-radius: 4px;';
 
-		// LinkedIn.
-		if ( get_option( 'apppresser_social_linkedin_enabled', true ) ) {
-			$bg    = get_option( 'apppresser_social_linkedin_bg_color', '#0A66C2' );
-			$text  = get_option( 'apppresser_social_linkedin_text_color', '#ffffff' );
-			$html .= '<a href="' . esc_url( $linkedin_url ) . '" target="_blank" rel="noopener noreferrer" style="padding: 8px 16px; background-color: ' . esc_attr( $bg ) . '; color: ' . esc_attr( $text ) . '; text-decoration: none; border-radius: 4px;">LinkedIn</a>';
-		}
-
-		// Bluesky.
-		if ( get_option( 'apppresser_social_bluesky_enabled', true ) ) {
-			$bg    = get_option( 'apppresser_social_bluesky_bg_color', '#1185FE' );
-			$text  = get_option( 'apppresser_social_bluesky_text_color', '#ffffff' );
-			$html .= '<a href="' . esc_url( $bluesky_url ) . '" target="_blank" rel="noopener noreferrer" style="padding: 8px 16px; background-color: ' . esc_attr( $bg ) . '; color: ' . esc_attr( $text ) . '; text-decoration: none; border-radius: 4px;">Bluesky</a>';
+			if ( 'print' === $key ) {
+				$html .= '<a href="' . $url . '" style="' . $style . ' cursor: pointer;">' . $label . '</a>';
+			} elseif ( 'email' === $key ) {
+				$html .= '<a href="' . esc_url( $url ) . '" style="' . $style . '">' . $label . '</a>';
+			} else {
+				$html .= '<a href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer" style="' . $style . '">' . $label . '</a>';
+			}
 		}
 
 		$html .= '</div>';
