@@ -61,6 +61,13 @@ body[class*="settings_page_apppresser-"] #wpcontent {
     border-top: none;
 }
 
+/* Core's .components-panel__row label { max-width: 75% } is meant for rows
+   that pair a label with a separate control; it also catches the label
+   inside a standalone ToggleControl's own flex row, wrapping it early. */
+.components-panel__row .components-toggle-control__label {
+	max-width: none;
+}
+
 .CodeMirror {
 	border: 1px solid #949494;
 	border-radius: 2px;

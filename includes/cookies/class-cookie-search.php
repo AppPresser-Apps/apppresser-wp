@@ -62,33 +62,61 @@ class AppPresser_Cookie_Search {
 
 		check_admin_referer( 'apppresser_scan_cookies', 'apppresser_scan_nonce' );
 
-		$cookies = $this->scan_site();
+		$cookies = $this->scan_site( $fetch_error );
 
 		update_option( self::OPTION_KEY, $cookies );
 
-		wp_safe_redirect( add_query_arg( 'scanned', '1', wp_get_referer() ) );
+		$redirect_args = array( 'scanned' => '1' );
+		if ( $fetch_error ) {
+			$redirect_args['apppresser_scan_error'] = rawurlencode( $fetch_error );
+		}
+
+		wp_safe_redirect( add_query_arg( $redirect_args, wp_get_referer() ) );
 		exit;
 	}
 
 	/**
 	 * Scan the site for cookies.
 	 *
+	 * @param string|null $fetch_error Set by reference to a human-readable error when the
+	 *                                 homepage request fails or is blocked (e.g. by a WAF),
+	 *                                 so the caller can surface it instead of failing silently.
 	 * @return array
 	 */
-	private function scan_site() {
-		$found = array();
+	private function scan_site( &$fetch_error = null ) {
+		$found       = array();
+		$fetch_error = null;
 
 		// 1. Request the homepage and capture Set-Cookie headers.
-		$home_url = home_url( '/' );
+		// A browser-like user agent is required because some hosts/WAFs (common on
+		// .gov and enterprise hosting) block or challenge requests carrying WordPress's
+		// default user agent, even though the same page loads fine in a real browser.
+		// A cache-busting query arg plus no-cache headers keep CDNs/edge caches (which
+		// often skip caching for logged-in requests but serve stale HTML to anonymous
+		// ones like this scan) from returning an outdated copy of the page.
+		$home_url = add_query_arg( 'apppresser_scan', time(), home_url( '/' ) );
 		$response = wp_remote_get(
 			$home_url,
 			array(
-				'timeout'   => 15,
-				'sslverify' => false,
+				'timeout'    => 15,
+				'sslverify'  => false,
+				'user-agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+				'headers'    => array(
+					'Cache-Control' => 'no-cache, no-store, must-revalidate',
+					'Pragma'        => 'no-cache',
+				),
 			)
 		);
 
-		if ( ! is_wp_error( $response ) ) {
+		if ( is_wp_error( $response ) ) {
+			$fetch_error = $response->get_error_message();
+		} else {
+			$status_code = wp_remote_retrieve_response_code( $response );
+			if ( $status_code < 200 || $status_code >= 300 ) {
+				/* translators: %d: HTTP status code. */
+				$fetch_error = sprintf( __( 'Homepage request returned HTTP %d instead of the page content. It may be blocked by a firewall or security service.', 'apppresser-wp' ), $status_code );
+			}
+
 			$headers = wp_remote_retrieve_headers( $response );
 
 			// Collect all Set-Cookie headers.

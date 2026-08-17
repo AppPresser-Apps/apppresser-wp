@@ -22,6 +22,7 @@ const {
 	scanAction,
 	scanField,
 	scanNonceField,
+	scanError,
 } = window.apppresserCookies || {};
 
 const CATEGORY_OPTIONS = [
@@ -271,6 +272,22 @@ const CookieScannerApp = () => {
 						style={ { marginBottom: 16 } }
 					>
 						{ notice.message }
+					</Notice>
+				) }
+
+				{ scanError && (
+					<Notice
+						status="error"
+						isDismissible={ false }
+						style={ { marginBottom: 16 } }
+					>
+						{ sprintf(
+							__(
+								'The last scan could not read your homepage: %s. The results below may be incomplete.',
+								'apppresser-wp'
+							),
+							scanError
+						) }
 					</Notice>
 				) }
 

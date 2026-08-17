@@ -184,6 +184,7 @@ class AppPresser_Cookies {
 					'scanAction'      => 'scan_cookies',
 					'scanField'       => 'apppresser_action',
 					'scanNonceField'  => 'apppresser_scan_nonce',
+					'scanError'       => isset( $_GET['apppresser_scan_error'] ) ? sanitize_text_field( wp_unslash( $_GET['apppresser_scan_error'] ) ) : '',
 				)
 			);
 
