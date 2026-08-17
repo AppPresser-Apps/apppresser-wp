@@ -29,21 +29,99 @@ class AppPresser_Options {
 	 * @var array<string, array{label: string, help: string}>
 	 */
 	private $options = array(
-		'disable_comments'              => array(
+		'disable_all_updates'                        => array(
+			'label' => 'Disable All Updates',
+			'help'  => 'Completely disable core, theme and plugin updates and auto-updates. Will also disable update checks, notices and emails.',
+		),
+		'disable_comments'                           => array(
 			'label' => 'Disable Comments',
 			'help'  => 'Completely disable comments across the entire site. Existing comments will be hidden from the frontend.',
 		),
-		'disable_application_passwords' => array(
+		'disable_application_passwords'              => array(
 			'label' => 'Disable Application Passwords',
 			'help'  => 'Disable the WordPress Application Passwords feature for all users.',
 		),
-		'enable_markdown_urls'          => array(
+		'disable_admin_email_verification'           => array(
+			'label' => 'Disable Admin Email Verification Screen',
+			'help'  => 'Disable the site admin email verification screen that was added since WordPress v5.3.',
+		),
+		'disable_admin_password_change_notification' => array(
+			'label' => 'Disable Admin Password Change Notification',
+			'help'  => 'Disable admin email notification after password change by a user.',
+		),
+		'disable_plugin_theme_editor'                => array(
+			'label' => 'Disable Plugin and Theme Editor',
+			'help'  => 'Disable the plugin and theme editor.',
+		),
+		'disable_user_password_change_notification'  => array(
+			'label' => 'Disable User Password Change Notification',
+			'help'  => 'Disable user email notification after password change.',
+		),
+		'disable_lazy_load'                          => array(
+			'label' => 'Disable Lazy Loading of Images',
+			'help'  => 'Disable lazy loading of images that was natively added since WordPress v5.5.',
+		),
+		'enable_markdown_urls'                       => array(
 			'label' => 'Enable LLM .md URLs',
 			'help'  => 'Allow posts and pages to be accessed as Markdown by appending .md to the URL (e.g. /hello-world.md). After enabling, go to Settings > Permalinks and click Save Changes.',
 		),
-		'header_banner'                 => array(
+		'header_banner'                               => array(
 			'label' => 'Enable Header Banner',
 			'help'  => 'Display a thin banner above the site header. Use the Banner Content panel below to edit the banner text.',
+		),
+		'smtp'                                        => array(
+			'label' => 'Enable Custom SMTP',
+			'help'  => 'Send outgoing mail through the SMTP server configured below instead of the default mail transport.',
+		),
+	);
+
+	/**
+	 * SMTP field definitions.
+	 *
+	 * @var array<string, array{label: string, type: string}>
+	 */
+	private $smtp_fields = array(
+		'host'       => array(
+			'label' => 'SMTP Host',
+			'type'  => 'text',
+		),
+		'port'       => array(
+			'label' => 'SMTP Port',
+			'type'  => 'text',
+		),
+		'encryption' => array(
+			'label'   => 'Encryption',
+			'type'    => 'select',
+			'options' => array(
+				array(
+					'label' => 'None',
+					'value' => 'none',
+				),
+				array(
+					'label' => 'SSL',
+					'value' => 'ssl',
+				),
+				array(
+					'label' => 'TLS',
+					'value' => 'tls',
+				),
+			),
+		),
+		'username'   => array(
+			'label' => 'SMTP Username',
+			'type'  => 'text',
+		),
+		'password'   => array(
+			'label' => 'SMTP Password',
+			'type'  => 'password',
+		),
+		'from_email' => array(
+			'label' => 'From Email',
+			'type'  => 'text',
+		),
+		'from_name'  => array(
+			'label' => 'From Name',
+			'type'  => 'text',
 		),
 	);
 
@@ -57,6 +135,18 @@ class AppPresser_Options {
 		add_action( 'wp_ajax_apppresser_options_save_banner', array( $this, 'handle_save_banner' ) );
 		add_action( 'wp_ajax_apppresser_options_save_banner_color', array( $this, 'handle_save_banner_color' ) );
 		add_action( 'wp_ajax_apppresser_options_save_banner_text_color', array( $this, 'handle_save_banner_text_color' ) );
+		add_action( 'wp_ajax_apppresser_options_save_smtp', array( $this, 'handle_save_smtp' ) );
+		add_action( 'wp_ajax_apppresser_options_save_custom_code', array( $this, 'handle_save_custom_code' ) );
+
+		// Output custom header/body/footer code.
+		add_action( 'wp_head', array( $this, 'render_custom_header_code' ), 999 );
+		add_action( 'wp_body_open', array( $this, 'render_custom_body_code' ) );
+		add_action( 'wp_footer', array( $this, 'render_custom_footer_code' ), 999 );
+
+		// Apply update disabling if enabled.
+		if ( get_option( 'apppresser_disable_all_updates_enabled', false ) ) {
+			add_action( 'init', array( $this, 'disable_all_updates' ), 1 );
+		}
 
 		// Apply comment disabling if enabled.
 		if ( get_option( 'apppresser_disable_comments_enabled', false ) ) {
@@ -66,6 +156,33 @@ class AppPresser_Options {
 		// Apply application passwords disabling if enabled.
 		if ( get_option( 'apppresser_disable_application_passwords_enabled', false ) ) {
 			add_filter( 'wp_is_application_passwords_available', '__return_false' );
+		}
+
+		// Apply admin email verification screen disabling if enabled.
+		if ( get_option( 'apppresser_disable_admin_email_verification_enabled', false ) ) {
+			add_filter( 'admin_email_check_interval', '__return_zero' );
+		}
+
+		// Stop notifying the site admin when a user changes their password.
+		if ( get_option( 'apppresser_disable_admin_password_change_notification_enabled', false ) ) {
+			remove_action( 'after_password_reset', 'wp_password_change_notification' );
+		}
+
+		// Disable the plugin and theme file editors.
+		if ( get_option( 'apppresser_disable_plugin_theme_editor_enabled', false ) ) {
+			if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
+				define( 'DISALLOW_FILE_EDIT', true );
+			}
+		}
+
+		// Stop notifying a user when their own password changes.
+		if ( get_option( 'apppresser_disable_user_password_change_notification_enabled', false ) ) {
+			add_filter( 'send_password_change_email', '__return_false' );
+		}
+
+		// Disable native lazy loading of images.
+		if ( get_option( 'apppresser_disable_lazy_load_enabled', false ) ) {
+			add_filter( 'wp_lazy_loading_enabled', '__return_false' );
 		}
 
 		// Apply markdown URLs if enabled.
@@ -78,6 +195,11 @@ class AppPresser_Options {
 		// Apply header banner if enabled.
 		if ( get_option( 'apppresser_header_banner_enabled', false ) ) {
 			add_action( 'wp_body_open', array( $this, 'render_header_banner' ) );
+		}
+
+		// Apply custom SMTP if enabled and configured.
+		if ( get_option( 'apppresser_smtp_enabled', false ) && $this->is_smtp_configured() ) {
+			add_action( 'phpmailer_init', array( $this, 'configure_smtp' ) );
 		}
 	}
 
@@ -109,10 +231,21 @@ class AppPresser_Options {
 		if ( file_exists( $asset_file ) ) {
 			$asset = require $asset_file;
 
+			// Enqueue WordPress' bundled CodeMirror editor (used for the custom
+			// code fields). Returns false if the user has disabled syntax
+			// highlighting in their profile, in which case we fall back to a
+			// plain textarea on the JS side.
+			$code_editor_settings = wp_enqueue_code_editor( array( 'type' => 'text/html' ) );
+
+			$dependencies = $asset['dependencies'];
+			if ( $code_editor_settings ) {
+				$dependencies[] = 'code-editor';
+			}
+
 			wp_enqueue_script(
 				'apppresser-options',
 				APPRESSER_WP_URL . '/build/index.js',
-				$asset['dependencies'],
+				$dependencies,
 				$asset['version'],
 				true
 			);
@@ -122,17 +255,31 @@ class AppPresser_Options {
 				$settings[ $key ] = get_option( 'apppresser_' . $key . '_enabled', false );
 			}
 
+			$smtp_settings = array();
+			foreach ( $this->smtp_fields as $key => $data ) {
+				$smtp_settings[ $key ] = get_option( 'apppresser_smtp_' . $key, '' );
+			}
+
 			wp_localize_script(
 				'apppresser-options',
 				'apppresserOptions',
 				array(
-					'settings'        => $settings,
-					'options'         => $this->options,
-					'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
-					'nonce'           => wp_create_nonce( 'apppresser_options_nonce' ),
-					'bannerContent'   => get_option( 'apppresser_header_banner_content', '' ),
-					'bannerColor'     => get_option( 'apppresser_header_banner_color', '#1e1e1e' ),
-					'bannerTextColor' => get_option( 'apppresser_header_banner_text_color', '#ffffff' ),
+					'settings'           => $settings,
+					'options'            => $this->options,
+					'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
+					'nonce'              => wp_create_nonce( 'apppresser_options_nonce' ),
+					'bannerContent'      => get_option( 'apppresser_header_banner_content', '' ),
+					'bannerColor'        => get_option( 'apppresser_header_banner_color', '#1e1e1e' ),
+					'bannerTextColor'    => get_option( 'apppresser_header_banner_text_color', '#ffffff' ),
+					'smtpFields'         => $this->smtp_fields,
+					'smtpSettings'       => $smtp_settings,
+					'smtpConfigured'     => $this->is_smtp_configured(),
+					'customCode'         => array(
+						'header' => get_option( 'apppresser_custom_code_header', '' ),
+						'body'   => get_option( 'apppresser_custom_code_body', '' ),
+						'footer' => get_option( 'apppresser_custom_code_footer', '' ),
+					),
+					'codeEditorSettings' => $code_editor_settings,
 				)
 			);
 
@@ -162,6 +309,10 @@ class AppPresser_Options {
 
 		if ( ! array_key_exists( $key, $this->options ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid option key.' ), 400 );
+		}
+
+		if ( 'smtp' === $key && $enabled && ! $this->is_smtp_configured() ) {
+			wp_send_json_error( array( 'message' => 'Enter SMTP host, username, and password before enabling.' ), 400 );
 		}
 
 		update_option( 'apppresser_' . $key . '_enabled', $enabled );
@@ -246,6 +397,134 @@ class AppPresser_Options {
 	}
 
 	/**
+	 * AJAX handler for saving a single SMTP field.
+	 */
+	public function handle_save_smtp() {
+		check_ajax_referer( 'apppresser_options_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$key = isset( $_POST['key'] ) ? sanitize_key( $_POST['key'] ) : '';
+
+		if ( ! array_key_exists( $key, $this->smtp_fields ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid SMTP field.' ), 400 );
+		}
+
+		$value = isset( $_POST['value'] ) ? sanitize_text_field( wp_unslash( $_POST['value'] ) ) : '';
+
+		if ( 'from_email' === $key && '' !== $value ) {
+			$value = sanitize_email( $value );
+		}
+
+		if ( 'encryption' === $key ) {
+			$allowed_values = wp_list_pluck( $this->smtp_fields['encryption']['options'], 'value' );
+			if ( ! in_array( $value, $allowed_values, true ) ) {
+				wp_send_json_error( array( 'message' => 'Invalid encryption value.' ), 400 );
+			}
+		}
+
+		update_option( 'apppresser_smtp_' . $key, $value );
+
+		$enabled = (bool) get_option( 'apppresser_smtp_enabled', false );
+
+		if ( in_array( $key, array( 'host', 'username', 'password' ), true ) && $enabled && ! $this->is_smtp_configured() ) {
+			$enabled = false;
+			update_option( 'apppresser_smtp_enabled', false );
+		}
+
+		wp_send_json_success(
+			array(
+				'key'     => $key,
+				'value'   => $value,
+				'enabled' => $enabled,
+			)
+		);
+	}
+
+	/**
+	 * AJAX handler for saving a custom code section.
+	 */
+	public function handle_save_custom_code() {
+		check_ajax_referer( 'apppresser_options_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$key = isset( $_POST['key'] ) ? sanitize_key( $_POST['key'] ) : '';
+
+		if ( ! in_array( $key, array( 'header', 'body', 'footer' ), true ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid custom code section.' ), 400 );
+		}
+
+		// Intentionally not passed through wp_kses: this field accepts arbitrary
+		// script/HTML for injection into the page, and is limited to manage_options users.
+		$content = isset( $_POST['content'] ) ? wp_unslash( $_POST['content'] ) : '';
+
+		update_option( 'apppresser_custom_code_' . $key, $content );
+
+		wp_send_json_success(
+			array(
+				'key'     => $key,
+				'content' => $content,
+			)
+		);
+	}
+
+	/**
+	 * Whether the required SMTP fields (host, username, password) are filled in.
+	 *
+	 * @return bool
+	 */
+	private function is_smtp_configured() {
+		$host     = get_option( 'apppresser_smtp_host', '' );
+		$username = get_option( 'apppresser_smtp_username', '' );
+		$password = get_option( 'apppresser_smtp_password', '' );
+
+		return '' !== $host && '' !== $username && '' !== $password;
+	}
+
+	/**
+	 * Configure PHPMailer to send through the saved SMTP settings.
+	 *
+	 * @param PHPMailer $phpmailer The PHPMailer instance, passed by reference by WordPress.
+	 */
+	public function configure_smtp( $phpmailer ) {
+		$host = get_option( 'apppresser_smtp_host', '' );
+
+		if ( empty( $host ) ) {
+			return;
+		}
+
+		$port       = get_option( 'apppresser_smtp_port', '' );
+		$encryption = get_option( 'apppresser_smtp_encryption', 'none' );
+		$username   = get_option( 'apppresser_smtp_username', '' );
+		$password   = get_option( 'apppresser_smtp_password', '' );
+		$from_email = get_option( 'apppresser_smtp_from_email', '' );
+		$from_name  = get_option( 'apppresser_smtp_from_name', '' );
+
+		$phpmailer->isSMTP();
+		$phpmailer->Host       = $host;
+		$phpmailer->SMTPAuth   = ! empty( $username );
+		$phpmailer->SMTPSecure = 'none' === $encryption ? '' : $encryption;
+
+		if ( ! empty( $port ) ) {
+			$phpmailer->Port = (int) $port;
+		}
+
+		if ( ! empty( $username ) ) {
+			$phpmailer->Username = $username;
+			$phpmailer->Password = $password;
+		}
+
+		if ( ! empty( $from_email ) && is_email( $from_email ) ) {
+			$phpmailer->setFrom( $from_email, $from_name ? $from_name : $from_email );
+		}
+	}
+
+	/**
 	 * Render the header banner on the frontend.
 	 */
 	public function render_header_banner() {
@@ -277,16 +556,98 @@ class AppPresser_Options {
 	}
 
 	/**
+	 * Output the custom header code in <head>.
+	 */
+	public function render_custom_header_code() {
+		$code = get_option( 'apppresser_custom_code_header', '' );
+
+		if ( empty( $code ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $code;
+	}
+
+	/**
+	 * Output the custom body code right after <body>.
+	 */
+	public function render_custom_body_code() {
+		$code = get_option( 'apppresser_custom_code_body', '' );
+
+		if ( empty( $code ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $code;
+	}
+
+	/**
+	 * Output the custom footer code before </body>.
+	 */
+	public function render_custom_footer_code() {
+		$code = get_option( 'apppresser_custom_code_footer', '' );
+
+		if ( empty( $code ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $code;
+	}
+
+	/**
 	 * Render the admin page content.
 	 */
 	public function render_page() {
-		?>
-		<div class="plugin-header">
-			<img src="<?php echo esc_url( APPRESSER_WP_URL . '/apppresser.jpg' ); ?>" alt="AppPresser" class="plugin-header-logo" />
-			<h1>Options</h1>
-		</div>
-		<div id="apppresser-options-root"></div>
-		<?php
+		AppPresser_Settings_Page::render( 'Options', 'apppresser-options-root' );
+	}
+
+	/**
+	 * Disable core, plugin and theme updates, update checks, notices and emails.
+	 */
+	public function disable_all_updates() {
+		// Stop the scheduled and inline update checks.
+		remove_action( 'init', 'wp_version_check' );
+		remove_action( 'init', 'wp_update_plugins' );
+		remove_action( 'init', 'wp_update_themes' );
+		wp_clear_scheduled_hook( 'wp_version_check' );
+		wp_clear_scheduled_hook( 'wp_update_plugins' );
+		wp_clear_scheduled_hook( 'wp_update_themes' );
+
+		// Disable all automatic updates (core, plugins, themes, translations).
+		add_filter( 'automatic_updater_disabled', '__return_true' );
+		add_filter( 'auto_update_core', '__return_false' );
+		add_filter( 'auto_update_plugin', '__return_false' );
+		add_filter( 'auto_update_theme', '__return_false' );
+		add_filter( 'auto_update_translation', '__return_false' );
+		add_filter( 'allow_minor_auto_core_updates', '__return_false' );
+		add_filter( 'allow_major_auto_core_updates', '__return_false' );
+
+		// Report no updates available, so update counts and notices stay hidden.
+		add_filter( 'pre_site_transient_update_core', array( $this, 'suppress_update_transient' ) );
+		add_filter( 'pre_site_transient_update_plugins', array( $this, 'suppress_update_transient' ) );
+		add_filter( 'pre_site_transient_update_themes', array( $this, 'suppress_update_transient' ) );
+
+		// Disable update notification emails.
+		add_filter( 'auto_core_update_send_email', '__return_false' );
+		add_filter( 'send_core_update_notification_email', '__return_false' );
+		add_filter( 'automatic_updates_send_debug_email', '__return_false' );
+	}
+
+	/**
+	 * Return an update transient reporting nothing available.
+	 *
+	 * @return stdClass
+	 */
+	public function suppress_update_transient() {
+		$data               = new stdClass();
+		$data->last_checked = time();
+		$data->updates      = array();
+		$data->response     = array();
+		$data->translations = array();
+		return $data;
 	}
 
 	/**

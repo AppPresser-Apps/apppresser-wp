@@ -28,6 +28,9 @@ define( 'APPRESSER_WP_URL', plugins_url( basename( __DIR__ ) ) );
 define( 'APPRESSER_WP_SLUG', plugin_basename( __FILE__ ) );
 define( 'APPRESSER_WP_FILE', __FILE__ );
 
+// Load shared settings page layout.
+require_once APPRESSER_WP_DIR . 'includes/class-settings-page.php';
+
 // Load accessibility module.
 require_once APPRESSER_WP_DIR . 'includes/accessibility/class-accessibility.php';
 new AppPresser_Accessibility();
@@ -59,3 +62,11 @@ new AppPresser_Pop_Ups();
 // Load options module.
 require_once APPRESSER_WP_DIR . 'includes/options/class-options.php';
 new AppPresser_Options();
+
+// Load security module.
+require_once APPRESSER_WP_DIR . 'includes/security/class-security.php';
+new AppPresser_Security();
+
+// Load duplicate post/page module.
+require_once APPRESSER_WP_DIR . 'includes/duplicate/class-apppresser-duplicate.php';
+new AppPresser_Duplicate();

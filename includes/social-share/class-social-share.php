@@ -235,13 +235,7 @@ class AppPresser_Social_Share {
 	 * Render the admin page content.
 	 */
 	public function render_page() {
-		?>
-		<div class="plugin-header">
-			<img src="<?php echo esc_url( APPRESSER_WP_URL . '/apppresser.jpg' ); ?>" alt="AppPresser" class="plugin-header-logo" />
-			<h1>Social Share</h1>
-		</div>
-		<div id="apppresser-social-share-root"></div>
-		<?php
+		AppPresser_Settings_Page::render( 'Social Share', 'apppresser-social-share-root' );
 	}
 
 	/**

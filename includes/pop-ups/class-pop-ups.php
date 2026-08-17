@@ -161,13 +161,7 @@ class AppPresser_Pop_Ups {
 	 * Render the admin page content.
 	 */
 	public function render_page() {
-		?>
-		<div class="plugin-header">
-			<img src="<?php echo esc_url( APPRESSER_WP_URL . '/apppresser.jpg' ); ?>" alt="AppPresser" class="plugin-header-logo" />
-			<h1>Pop Ups</h1>
-		</div>
-		<div id="apppresser-pop-ups-root"></div>
-		<?php
+		AppPresser_Settings_Page::render( 'Pop Ups', 'apppresser-pop-ups-root' );
 	}
 
 	/**

@@ -127,11 +127,27 @@ class AppPresser_Cookie_Search {
 					$found[ $name ] = $data;
 				}
 			}
+
+			// 2b. Scan response headers for services that don't leave a trace in the body (e.g. Cloudflare).
+			$header_cookies = $this->scan_headers_for_cookies( $headers );
+			foreach ( $header_cookies as $name => $data ) {
+				if ( ! isset( $found[ $name ] ) ) {
+					$found[ $name ] = $data;
+				}
+			}
 		}
 
 		// 3. Scan for known WordPress cookies.
 		$wp_cookies = $this->get_wordpress_cookies();
 		foreach ( $wp_cookies as $name => $data ) {
+			if ( ! isset( $found[ $name ] ) ) {
+				$found[ $name ] = $data;
+			}
+		}
+
+		// 4. Scan for active plugins that are known to set cookies (e.g. WooCommerce).
+		$plugin_cookies = $this->get_plugin_cookies();
+		foreach ( $plugin_cookies as $name => $data ) {
 			if ( ! isset( $found[ $name ] ) ) {
 				$found[ $name ] = $data;
 			}
@@ -212,41 +228,126 @@ class AppPresser_Cookie_Search {
 		$found  = array();
 		$domain = wp_parse_url( home_url(), PHP_URL_HOST );
 
+		// Cookies that scripts (e.g. consent tools) sometimes print literally in the HTML.
 		$patterns = array(
-			'/_ga\b/'            => array(
+			'/\b_ga\b/'     => array(
 				'name'        => '_ga',
 				'domain'      => $domain,
 				'duration'    => '2 years',
 				'category'    => 'analytics',
 				'description' => 'Google Analytics: used to distinguish users.',
 			),
-			'/_gid\b/'           => array(
+			'/\b_gid\b/'    => array(
 				'name'        => '_gid',
 				'domain'      => $domain,
 				'duration'    => '24 hours',
 				'category'    => 'analytics',
 				'description' => 'Google Analytics: used to distinguish users.',
 			),
-			'/_gat\b/'           => array(
+			'/\b_gat\b/'    => array(
 				'name'        => '_gat',
 				'domain'      => $domain,
 				'duration'    => '1 minute',
 				'category'    => 'analytics',
 				'description' => 'Google Analytics: used to throttle request rate.',
 			),
-			'/_fbp\b/'           => array(
+			'/\b_fbp\b/'    => array(
 				'name'        => '_fbp',
 				'domain'      => $domain,
 				'duration'    => '3 months',
 				'category'    => 'marketing',
 				'description' => 'Facebook Pixel: used to store and track visits across websites.',
 			),
-			'/googletagmanager/' => array(
-				'name'        => '_dc_gtm_UA-*',
+			'/\b_gcl_au\b/' => array(
+				'name'        => '_gcl_au',
 				'domain'      => $domain,
-				'duration'    => '1 minute',
+				'duration'    => '3 months',
+				'category'    => 'marketing',
+				'description' => 'Google Ads: used to store and track conversions.',
+			),
+			'/\b_gcl_aw\b/' => array(
+				'name'        => '_gcl_aw',
+				'domain'      => $domain,
+				'duration'    => '3 months',
+				'category'    => 'marketing',
+				'description' => 'Google Ads: used to store information about ad click-throughs.',
+			),
+			'/\b_gcl_dc\b/' => array(
+				'name'        => '_gcl_dc',
+				'domain'      => $domain,
+				'duration'    => '3 months',
+				'category'    => 'marketing',
+				'description' => 'Google Campaign Manager: used to store information about ad click-throughs.',
+			),
+			'/\b__gads\b/'  => array(
+				'name'        => '__gads',
+				'domain'      => '.doubleclick.net',
+				'duration'    => '13 months',
+				'category'    => 'marketing',
+				'description' => 'Google AdSense: used to measure ad performance and frequency.',
+			),
+			'/\b__gpi\b/'   => array(
+				'name'        => '__gpi',
+				'domain'      => '.doubleclick.net',
+				'duration'    => '13 months',
+				'category'    => 'marketing',
+				'description' => 'Google Publisher Tag: used to limit the number of times an ad is shown to a user.',
+			),
+			'/\b_fbc\b/'    => array(
+				'name'        => '_fbc',
+				'domain'      => $domain,
+				'duration'    => '2 years',
+				'category'    => 'marketing',
+				'description' => 'Facebook Pixel: used to store the last Facebook ad click identifier.',
+			),
+			'/\b_clck\b/'   => array(
+				'name'        => '_clck',
+				'domain'      => $domain,
+				'duration'    => '1 year',
 				'category'    => 'analytics',
-				'description' => 'Google Tag Manager: used to throttle request rate.',
+				'description' => 'Microsoft Clarity: persists a unique visitor ID across sessions.',
+			),
+			'/\b_clsk\b/'   => array(
+				'name'        => '_clsk',
+				'domain'      => $domain,
+				'duration'    => '1 day',
+				'category'    => 'analytics',
+				'description' => 'Microsoft Clarity: links page views into a single session recording.',
+			),
+			'/\bMUID\b/'    => array(
+				'name'        => 'MUID',
+				'domain'      => '.bing.com',
+				'duration'    => '1 year',
+				'category'    => 'analytics',
+				'description' => 'Microsoft: unique identifier used by Bing/Clarity/Microsoft Advertising.',
+			),
+			'/\b_ttp\b/'    => array(
+				'name'        => '_ttp',
+				'domain'      => $domain,
+				'duration'    => '13 months',
+				'category'    => 'marketing',
+				'description' => 'TikTok Pixel: used to identify visitors across sessions.',
+			),
+			'/\b__hstc\b/'  => array(
+				'name'        => '__hstc',
+				'domain'      => $domain,
+				'duration'    => '2 years',
+				'category'    => 'marketing',
+				'description' => 'HubSpot: tracks visitor sessions and campaign source.',
+			),
+			'/\bhubspotutk\b/' => array(
+				'name'        => 'hubspotutk',
+				'domain'      => $domain,
+				'duration'    => '13 months',
+				'category'    => 'marketing',
+				'description' => 'HubSpot: identifies logged-in contacts for form submissions and chat.',
+			),
+			'/\b__hssc\b/'  => array(
+				'name'        => '__hssc',
+				'domain'      => $domain,
+				'duration'    => '30 minutes',
+				'category'    => 'marketing',
+				'description' => 'HubSpot: tracks sessions to determine if a new session should start.',
 			),
 		);
 
@@ -254,6 +355,306 @@ class AppPresser_Cookie_Search {
 			if ( preg_match( $pattern, $body ) ) {
 				$found[ $cookie_data['name'] ] = $cookie_data;
 			}
+		}
+
+		// Scripts/tags whose presence implies cookies get set client-side, even
+		// when the cookie names themselves never appear as literal text in the HTML.
+		$script_signals = array(
+			// Google Tag Manager container.
+			'/googletagmanager\.com\/gtm\.js/i'                 => array(
+				'_dc_gtm_UA-*' => array(
+					'name'        => '_dc_gtm_UA-*',
+					'domain'      => $domain,
+					'duration'    => '1 minute',
+					'category'    => 'analytics',
+					'description' => 'Google Tag Manager: used to throttle request rate.',
+				),
+			),
+			// gtag.js — used by GA4 and modern Google Ads/Analytics setups.
+			'/googletagmanager\.com\/gtag\/js/i'                => array(
+				'_ga'  => array(
+					'name'        => '_ga',
+					'domain'      => $domain,
+					'duration'    => '2 years',
+					'category'    => 'analytics',
+					'description' => 'Google Analytics: used to distinguish users.',
+				),
+				'_gid' => array(
+					'name'        => '_gid',
+					'domain'      => $domain,
+					'duration'    => '24 hours',
+					'category'    => 'analytics',
+					'description' => 'Google Analytics: used to distinguish users.',
+				),
+			),
+			// Universal Analytics (legacy ga.js / analytics.js).
+			'/google-analytics\.com\/(ga|analytics)\.js/i'      => array(
+				'_ga'  => array(
+					'name'        => '_ga',
+					'domain'      => $domain,
+					'duration'    => '2 years',
+					'category'    => 'analytics',
+					'description' => 'Google Analytics: used to distinguish users.',
+				),
+				'_gid' => array(
+					'name'        => '_gid',
+					'domain'      => $domain,
+					'duration'    => '24 hours',
+					'category'    => 'analytics',
+					'description' => 'Google Analytics: used to distinguish users.',
+				),
+				'_gat' => array(
+					'name'        => '_gat',
+					'domain'      => $domain,
+					'duration'    => '1 minute',
+					'category'    => 'analytics',
+					'description' => 'Google Analytics: used to throttle request rate.',
+				),
+			),
+			// Google Ads / DoubleClick remarketing & conversion tracking.
+			'/(googleadservices\.com|googlesyndication\.com|doubleclick\.net)/i' => array(
+				'IDE' => array(
+					'name'        => 'IDE',
+					'domain'      => '.doubleclick.net',
+					'duration'    => '13 months',
+					'category'    => 'marketing',
+					'description' => 'Google DoubleClick: used to register and report ad interactions for remarketing and targeting.',
+				),
+				'test_cookie' => array(
+					'name'        => 'test_cookie',
+					'domain'      => '.doubleclick.net',
+					'duration'    => '15 minutes',
+					'category'    => 'marketing',
+					'description' => 'Google DoubleClick: used to check whether the browser supports cookies.',
+				),
+			),
+			// Google reCAPTCHA.
+			'/google\.com\/recaptcha/i'                         => array(
+				'_GRECAPTCHA' => array(
+					'name'        => '_GRECAPTCHA',
+					'domain'      => '.google.com',
+					'duration'    => '6 months',
+					'category'    => 'essential',
+					'description' => 'Google reCAPTCHA: used to distinguish humans from bots on forms.',
+				),
+			),
+			// YouTube embeds.
+			'/youtube(-nocookie)?\.com\/embed/i'                => array(
+				'VISITOR_INFO1_LIVE' => array(
+					'name'        => 'VISITOR_INFO1_LIVE',
+					'domain'      => '.youtube.com',
+					'duration'    => '6 months',
+					'category'    => 'marketing',
+					'description' => 'YouTube: estimates bandwidth on embedded videos and tracks visitor preferences.',
+				),
+				'YSC' => array(
+					'name'        => 'YSC',
+					'domain'      => '.youtube.com',
+					'duration'    => 'Session',
+					'category'    => 'marketing',
+					'description' => 'YouTube: tracks embedded video views to build a viewing profile.',
+				),
+			),
+			// Microsoft Clarity.
+			'/clarity\.ms/i'                                    => array(
+				'_clck' => array(
+					'name'        => '_clck',
+					'domain'      => $domain,
+					'duration'    => '1 year',
+					'category'    => 'analytics',
+					'description' => 'Microsoft Clarity: persists a unique visitor ID across sessions.',
+				),
+				'_clsk' => array(
+					'name'        => '_clsk',
+					'domain'      => $domain,
+					'duration'    => '1 day',
+					'category'    => 'analytics',
+					'description' => 'Microsoft Clarity: links page views into a single session recording.',
+				),
+			),
+			// Hotjar.
+			'/static\.hotjar\.com/i'                            => array(
+				'_hjSessionUser_*' => array(
+					'name'        => '_hjSessionUser_*',
+					'domain'      => $domain,
+					'duration'    => '1 year',
+					'category'    => 'analytics',
+					'description' => 'Hotjar: persists the Hotjar user ID, unique to the site.',
+				),
+				'_hjSession_*'     => array(
+					'name'        => '_hjSession_*',
+					'domain'      => $domain,
+					'duration'    => '30 minutes',
+					'category'    => 'analytics',
+					'description' => 'Hotjar: holds the current session data for site activity.',
+				),
+			),
+			// Facebook Pixel.
+			'/connect\.facebook\.net\/[^"\']*\/fbevents\.js/i'  => array(
+				'_fbp' => array(
+					'name'        => '_fbp',
+					'domain'      => $domain,
+					'duration'    => '3 months',
+					'category'    => 'marketing',
+					'description' => 'Facebook Pixel: used to store and track visits across websites.',
+				),
+			),
+			// LinkedIn Insight Tag.
+			'/snap\.licdn\.com/i'                               => array(
+				'bcookie' => array(
+					'name'        => 'bcookie',
+					'domain'      => '.linkedin.com',
+					'duration'    => '2 years',
+					'category'    => 'marketing',
+					'description' => 'LinkedIn: browser identifier cookie used to track visits.',
+				),
+				'lidc'    => array(
+					'name'        => 'lidc',
+					'domain'      => '.linkedin.com',
+					'duration'    => '24 hours',
+					'category'    => 'marketing',
+					'description' => 'LinkedIn: used for routing and identification during a session.',
+				),
+				'UserMatchHistory' => array(
+					'name'        => 'UserMatchHistory',
+					'domain'      => '.linkedin.com',
+					'duration'    => '30 days',
+					'category'    => 'marketing',
+					'description' => 'LinkedIn Ads: used for ad retargeting and matching site visitors to LinkedIn members.',
+				),
+			),
+			// TikTok Pixel.
+			'/analytics\.tiktok\.com/i'                         => array(
+				'_ttp' => array(
+					'name'        => '_ttp',
+					'domain'      => $domain,
+					'duration'    => '13 months',
+					'category'    => 'marketing',
+					'description' => 'TikTok Pixel: used to identify visitors across sessions.',
+				),
+			),
+			// Pinterest Tag.
+			'/s\.pinimg\.com/i'                                 => array(
+				'_pinterest_ct_ua' => array(
+					'name'        => '_pinterest_ct_ua',
+					'domain'      => $domain,
+					'duration'    => '1 year',
+					'category'    => 'marketing',
+					'description' => 'Pinterest: used to track conversions and site visits from Pinterest ads.',
+				),
+				'_pin_unauth' => array(
+					'name'        => '_pin_unauth',
+					'domain'      => $domain,
+					'duration'    => '1 year',
+					'category'    => 'marketing',
+					'description' => 'Pinterest: identifies logged-out visitors for ad attribution.',
+				),
+			),
+			// HubSpot.
+			'/js\.hs-(scripts|analytics)\.com|js\.hsforms\.net/i' => array(
+				'__hstc'     => array(
+					'name'        => '__hstc',
+					'domain'      => $domain,
+					'duration'    => '2 years',
+					'category'    => 'marketing',
+					'description' => 'HubSpot: tracks visitor sessions and campaign source.',
+				),
+				'hubspotutk' => array(
+					'name'        => 'hubspotutk',
+					'domain'      => $domain,
+					'duration'    => '13 months',
+					'category'    => 'marketing',
+					'description' => 'HubSpot: identifies logged-in contacts for form submissions and chat.',
+				),
+				'__hssc'     => array(
+					'name'        => '__hssc',
+					'domain'      => $domain,
+					'duration'    => '30 minutes',
+					'category'    => 'marketing',
+					'description' => 'HubSpot: tracks sessions to determine if a new session should start.',
+				),
+			),
+		);
+
+		foreach ( $script_signals as $pattern => $cookies ) {
+			if ( preg_match( $pattern, $body ) ) {
+				foreach ( $cookies as $name => $cookie_data ) {
+					if ( ! isset( $found[ $name ] ) ) {
+						$found[ $name ] = $cookie_data;
+					}
+				}
+			}
+		}
+
+		// Try to pick out a GA4 measurement ID (G-XXXXXXXXXX) so we can report
+		// the specific _ga_<container-id> cookie GA4 actually sets.
+		if ( preg_match( '/\bG-([A-Z0-9]{6,10})\b/', $body, $matches ) ) {
+			$cookie_name           = '_ga_' . $matches[1];
+			$found[ $cookie_name ] = array(
+				'name'        => $cookie_name,
+				'domain'      => $domain,
+				'duration'    => '2 years',
+				'category'    => 'analytics',
+				'description' => 'Google Analytics (GA4): used to persist session state.',
+			);
+		}
+
+		return $found;
+	}
+
+	/**
+	 * Scan HTTP response headers for services that don't leave a trace in the HTML body.
+	 *
+	 * @param array $headers Response headers.
+	 * @return array
+	 */
+	private function scan_headers_for_cookies( $headers ) {
+		$found = array();
+
+		if ( isset( $headers['cf-ray'] ) || isset( $headers['CF-RAY'] ) ) {
+			$found['__cfduid'] = array(
+				'name'        => '__cfduid',
+				'domain'      => wp_parse_url( home_url(), PHP_URL_HOST ),
+				'duration'    => '30 days',
+				'category'    => 'essential',
+				'description' => 'Cloudflare: used to identify trusted web traffic and mitigate bot activity.',
+			);
+		}
+
+		return $found;
+	}
+
+	/**
+	 * Get cookies known to be set by active plugins.
+	 *
+	 * @return array
+	 */
+	private function get_plugin_cookies() {
+		$found  = array();
+		$domain = wp_parse_url( home_url(), PHP_URL_HOST );
+
+		if ( class_exists( 'WooCommerce' ) ) {
+			$found['woocommerce_cart_hash'] = array(
+				'name'        => 'woocommerce_cart_hash',
+				'domain'      => $domain,
+				'duration'    => 'Session',
+				'category'    => 'essential',
+				'description' => 'WooCommerce: helps detect changes to the cart contents.',
+			);
+			$found['woocommerce_items_in_cart'] = array(
+				'name'        => 'woocommerce_items_in_cart',
+				'domain'      => $domain,
+				'duration'    => 'Session',
+				'category'    => 'essential',
+				'description' => 'WooCommerce: helps detect changes to the cart contents.',
+			);
+			$found['wp_woocommerce_session_*'] = array(
+				'name'        => 'wp_woocommerce_session_*',
+				'domain'      => $domain,
+				'duration'    => '2 days',
+				'category'    => 'essential',
+				'description' => 'WooCommerce: contains a unique code for each customer so their cart is retrievable.',
+			);
 		}
 
 		return $found;
@@ -354,8 +755,9 @@ class AppPresser_Cookie_Search {
 	 * @return string
 	 */
 	private function guess_category( $name, $domain ) {
-		$analytics_patterns = array( '_ga', '_gid', '_gat', 'utm_', '__utm', 'ga_', 'analytics' );
-		$marketing_patterns = array( '_fbp', 'fr', 'tr', 'ads', 'pixel', 'ad_' );
+		$analytics_patterns = array( '_ga', '_gid', '_gat', 'utm_', '__utm', 'ga_', 'analytics', '_clck', '_clsk', 'muid', '_hj' );
+		$marketing_patterns = array( '_fbp', '_fbc', 'fr', 'tr', 'ads', 'pixel', 'ad_', '_gcl_', '__gpi', 'doubleclick', '_ttp', '_pin', 'hstc', 'hssc', 'hubspotutk', 'bcookie', 'lidc' );
+		$marketing_exact    = array( 'nid', 'ide', '1p_jar', 'test_cookie', 'usermatchhistory' );
 
 		$name_lower = strtolower( $name );
 
@@ -371,6 +773,10 @@ class AppPresser_Cookie_Search {
 			}
 		}
 
+		if ( in_array( $name_lower, $marketing_exact, true ) ) {
+			return 'marketing';
+		}
+
 		return 'essential';
 	}
 
@@ -378,7 +784,7 @@ class AppPresser_Cookie_Search {
 	 * AJAX handler to save a cookie edit.
 	 */
 	public function ajax_save_cookie() {
-		check_ajax_referer( 'apppresser_cookie_scanner', 'nonce' );
+		check_ajax_referer( 'apppresser_scan_cookies', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( -1 );
@@ -419,7 +825,7 @@ class AppPresser_Cookie_Search {
 	 * AJAX handler to delete a cookie.
 	 */
 	public function ajax_delete_cookie() {
-		check_ajax_referer( 'apppresser_cookie_scanner', 'nonce' );
+		check_ajax_referer( 'apppresser_scan_cookies', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( -1 );
@@ -449,7 +855,7 @@ class AppPresser_Cookie_Search {
 	 * AJAX handler to add a new cookie manually.
 	 */
 	public function ajax_add_cookie() {
-		check_ajax_referer( 'apppresser_cookie_scanner', 'nonce' );
+		check_ajax_referer( 'apppresser_scan_cookies', 'nonce' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_die( -1 );

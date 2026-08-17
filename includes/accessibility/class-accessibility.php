@@ -207,13 +207,7 @@ class AppPresser_Accessibility {
 	 * Render the admin page content.
 	 */
 	public function render_page() {
-		?>
-		<div class="plugin-header">
-			<img src="<?php echo esc_url( APPRESSER_WP_URL . '/apppresser.jpg' ); ?>" alt="AppPresser" class="plugin-header-logo" />
-			<H1>Accessibility</H1>
-		</div>
-		<div id="apppresser-accessibility-root"></div>
-		<?php
+		AppPresser_Settings_Page::render( 'Accessibility', 'apppresser-accessibility-root' );
 	}
 
 	/**
