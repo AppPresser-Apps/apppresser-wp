@@ -11,6 +11,7 @@ import SocialShareApp from './components/SocialShareApp';
 import OptionsApp from './components/OptionsApp';
 import PopUpsApp from './components/PopUpsApp';
 import SecurityApp from './components/SecurityApp';
+import SeoApp from './components/SeoApp';
 
 const accessibilityContainer = document.getElementById( 'apppresser-accessibility-root' );
 const cookiesContainer = document.getElementById( 'apppresser-cookies-root' );
@@ -20,6 +21,7 @@ const socialShareContainer = document.getElementById( 'apppresser-social-share-r
 const optionsContainer = document.getElementById( 'apppresser-options-root' );
 const popUpsContainer = document.getElementById( 'apppresser-pop-ups-root' );
 const securityContainer = document.getElementById( 'apppresser-security-root' );
+const seoContainer = document.getElementById( 'apppresser-seo-root' );
 
 if ( accessibilityContainer ) {
 	const root = createRoot( accessibilityContainer );
@@ -59,4 +61,9 @@ if ( popUpsContainer ) {
 if ( securityContainer ) {
 	const root = createRoot( securityContainer );
 	root.render( <SecurityApp /> );
+}
+
+if ( seoContainer ) {
+	const root = createRoot( seoContainer );
+	root.render( <SeoApp /> );
 }

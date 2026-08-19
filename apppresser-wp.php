@@ -70,3 +70,11 @@ new AppPresser_Security();
 // Load duplicate post/page module.
 require_once APPRESSER_WP_DIR . 'includes/duplicate/class-apppresser-duplicate.php';
 new AppPresser_Duplicate();
+
+// Load custom avatar module.
+require_once APPRESSER_WP_DIR . 'includes/avatar/class-avatar.php';
+new AppPresser_Avatar();
+
+// Load SEO module.
+require_once APPRESSER_WP_DIR . 'includes/seo/class-seo.php';
+new AppPresser_Seo();
