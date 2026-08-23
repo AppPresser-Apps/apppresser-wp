@@ -362,7 +362,7 @@ const OptionsApp = () => {
 
 			{ bannerOption && (
 				<PanelBody
-					title={ __( 'Notifications', 'apppresser-wp' ) }
+					title={ __( 'Notification Banner', 'apppresser-wp' ) }
 					initialOpen={ false }
 				>
 					<PanelRow>

@@ -33,6 +33,7 @@ body[class*="settings_page_apppresser-"] #wpcontent {
 .plugin-header-logo {
 	width: 50px;
 	height: auto;
+	border-radius: 6px;
 }
 
 .components-panel {

@@ -27,7 +27,7 @@ class AppPresser_Settings_Page {
 	public static function render( $title, $root_ids ) {
 		?>
 		<div class="plugin-header">
-			<img src="<?php echo esc_url( APPRESSER_WP_URL . '/apppresser.jpg' ); ?>" alt="AppPresser" class="plugin-header-logo" />
+			<img src="<?php echo esc_url( APPRESSER_WP_URL . '/apppresser.png' ); ?>" alt="AppPresser" class="plugin-header-logo" />
 			<h1><?php echo esc_html( $title ); ?></h1>
 		</div>
 		<?php
