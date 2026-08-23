@@ -104,6 +104,11 @@ class AppPresser_Seo {
 
 		// Output structured data (JSON-LD) on the frontend.
 		add_action( 'wp_head', array( $this, 'output_structured_data' ), 10 );
+
+		// Serve the XML sitemap at /sitemap.xml.
+		add_action( 'init', array( $this, 'add_sitemap_rewrite_rule' ) );
+		add_filter( 'query_vars', array( $this, 'add_sitemap_query_var' ) );
+		add_action( 'template_redirect', array( $this, 'maybe_output_sitemap' ) );
 	}
 
 	/**
@@ -442,14 +447,6 @@ class AppPresser_Seo {
 
 			if ( $post && ! empty( $post->post_excerpt ) ) {
 				return $this->trim_description( $post->post_excerpt );
-			}
-
-			if ( $post && ! empty( $post->post_content ) ) {
-				$content = wp_strip_all_tags( $post->post_content );
-
-				if ( '' !== $content ) {
-					return $this->trim_description( $content );
-				}
 			}
 		}
 
@@ -841,6 +838,123 @@ class AppPresser_Seo {
 			'@type'           => 'BreadcrumbList',
 			'itemListElement' => $items,
 		);
+	}
+
+	/**
+	 * Add the rewrite rule that maps /sitemap.xml to the sitemap handler.
+	 */
+	public function add_sitemap_rewrite_rule() {
+		add_rewrite_rule( '^sitemap\.xml$', 'index.php?apppresser_sitemap=1', 'top' );
+
+		// Flush rewrite rules once so the new rule is persisted.
+		if ( '1' !== get_option( 'apppresser_seo_sitemap_rewrite_version' ) ) {
+			flush_rewrite_rules();
+			update_option( 'apppresser_seo_sitemap_rewrite_version', '1' );
+		}
+	}
+
+	/**
+	 * Register the sitemap query variable.
+	 *
+	 * @param string[] $vars Existing query vars.
+	 * @return string[]
+	 */
+	public function add_sitemap_query_var( $vars ) {
+		$vars[] = 'apppresser_sitemap';
+		return $vars;
+	}
+
+	/**
+	 * Output the XML sitemap when the sitemap query var is present.
+	 */
+	public function maybe_output_sitemap() {
+		if ( ! get_query_var( 'apppresser_sitemap' ) ) {
+			return;
+		}
+
+		$urls = $this->get_sitemap_urls();
+
+		status_header( 200 );
+		nocache_headers();
+		header( 'Content-Type: application/xml; charset=UTF-8' );
+
+		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+
+		foreach ( $urls as $url ) {
+			echo "\t<url>\n";
+			echo "\t\t<loc>" . esc_xml( $url['loc'] ) . "</loc>\n";
+
+			if ( ! empty( $url['lastmod'] ) ) {
+				echo "\t\t<lastmod>" . esc_xml( $url['lastmod'] ) . "</lastmod>\n";
+			}
+
+			echo "\t</url>\n";
+		}
+
+		echo '</urlset>';
+		exit;
+	}
+
+	/**
+	 * Build the list of URLs to include in the sitemap.
+	 *
+	 * @return array<int, array{loc: string, lastmod: string}>
+	 */
+	private function get_sitemap_urls() {
+		$urls = array();
+
+		// Homepage.
+		$home_lastmod = get_lastpostmodified( 'gmt' );
+		$urls[]       = array(
+			'loc'     => home_url( '/' ),
+			'lastmod' => $home_lastmod ? str_replace( ' ', 'T', $home_lastmod ) . '+00:00' : '',
+		);
+
+		// Published posts and pages.
+		$posts = get_posts(
+			array(
+				'post_type'   => array( 'post', 'page' ),
+				'post_status' => 'publish',
+				'numberposts' => -1,
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+			)
+		);
+
+		foreach ( $posts as $post ) {
+			$urls[] = array(
+				'loc'     => get_permalink( $post ),
+				'lastmod' => get_post_modified_time( 'c', true, $post ),
+			);
+		}
+
+		// Public taxonomy terms, unless archives are set to noindex.
+		if ( ! $this->get_setting( 'noindex_archives' ) ) {
+			$taxonomies = get_taxonomies( array( 'public' => true ), 'objects' );
+
+			foreach ( $taxonomies as $taxonomy ) {
+				$terms = get_terms(
+					array(
+						'taxonomy'   => $taxonomy->name,
+						'hide_empty' => true,
+					)
+				);
+
+				if ( is_wp_error( $terms ) ) {
+					continue;
+				}
+
+				foreach ( $terms as $term ) {
+					$urls[] = array(
+						'loc'     => get_term_link( $term ),
+						'lastmod' => '',
+					);
+				}
+			}
+		}
+
+		return $urls;
 	}
 
 	/**

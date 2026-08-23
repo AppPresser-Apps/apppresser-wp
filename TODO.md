@@ -22,7 +22,7 @@
 
 ### Other
 
-- [ ] XML sitemap — generate `sitemap.xml` (posts, pages, taxonomies).
+- [x] XML sitemap — generate `sitemap.xml` (posts, pages, taxonomies).
 - [ ] `og:image` dimensions — `og:image:width` / `og:image:height`.
 - [ ] `robots.txt` editor — manage robots.txt from the settings page.
 - [ ] Social profile URLs — for `sameAs` in the Organization schema.

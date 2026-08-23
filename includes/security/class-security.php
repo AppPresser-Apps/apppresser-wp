@@ -54,8 +54,12 @@ class AppPresser_Security {
 			'value' => 'default',
 		),
 		array(
-			'label' => 'Restricted Access',
+			'label' => 'Restrict All Access',
 			'value' => 'restricted',
+		),
+		array(
+			'label' => 'Allowed Endpoints',
+			'value' => 'allowed',
 		),
 	);
 
@@ -118,8 +122,13 @@ class AppPresser_Security {
 			add_filter( 'xmlrpc_methods', array( $this, 'remove_multicall_method' ) );
 		}
 
-		if ( 'restricted' === $this->get_rest_api_access() ) {
-			add_filter( 'rest_authentication_errors', array( $this, 'restrict_rest_api' ) );
+		$rest_api_access = $this->get_rest_api_access();
+
+		if ( 'restricted' === $rest_api_access ) {
+			add_filter( 'rest_authentication_errors', array( $this, 'disable_rest_api' ) );
+		} elseif ( 'allowed' === $rest_api_access ) {
+			add_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
+			add_filter( 'rest_dispatch_request', array( $this, 'restrict_public_rest_api' ), 10, 4 );
 		}
 
 		$login_id_mode = $this->get_login_id_mode();
@@ -233,25 +242,169 @@ class AppPresser_Security {
 	}
 
 	/**
-	 * Restrict REST API access to authenticated users.
+	 * Fully disable the REST API.
 	 *
 	 * @param WP_Error|null|bool $result Current authentication error result.
 	 * @return WP_Error|null|bool
 	 */
-	public function restrict_rest_api( $result ) {
+	public function disable_rest_api( $result ) {
 		if ( ! empty( $result ) ) {
 			return $result;
 		}
 
-		if ( ! is_user_logged_in() ) {
-			return new WP_Error(
-				'apppresser_rest_restricted',
-				__( 'The REST API is restricted to authenticated users on this site.', 'apppresser-wp' ),
-				array( 'status' => rest_authorization_required_code() )
+		return new WP_Error(
+			'apppresser_rest_disabled',
+			__( 'The REST API has been disabled on this site.', 'apppresser-wp' ),
+			array( 'status' => 404 )
+		);
+	}
+
+	/**
+	 * Remove blocked REST API endpoints.
+	 *
+	 * Only authenticated endpoints are removed entirely. Public endpoints are
+	 * kept in the index but gated for logged-out users by
+	 * {@see AppPresser_Security::restrict_public_rest_api()}.
+	 *
+	 * @param array $endpoints Registered REST API endpoints.
+	 * @return array
+	 */
+	public function filter_rest_endpoints( $endpoints ) {
+		$blocked = get_option( 'apppresser_rest_blocked_endpoints', array() );
+
+		if ( ! is_array( $blocked ) || empty( $blocked ) ) {
+			return $endpoints;
+		}
+
+		foreach ( $endpoints as $route => $handlers ) {
+			if ( in_array( $route, $blocked, true ) && $this->route_has_permission_callback( $handlers ) ) {
+				unset( $endpoints[ $route ] );
+			}
+		}
+
+		return $endpoints;
+	}
+
+	/**
+	 * Determine whether a route requires authentication.
+	 *
+	 * @param array $handlers The raw route handlers from the endpoints array.
+	 * @return bool
+	 */
+	private function route_has_permission_callback( $handlers ) {
+		if ( isset( $handlers['callback'] ) ) {
+			$handlers = array( $handlers );
+		}
+
+		foreach ( $handlers as $handler ) {
+			if ( ! empty( $handler['permission_callback'] ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Block unchecked public REST API endpoints for logged-out users.
+	 *
+	 * @param mixed           $dispatch_result Current dispatch result.
+	 * @param WP_REST_Request $request         The request object.
+	 * @param string          $route           The matched route regex.
+	 * @param array           $handler         The matched route handler.
+	 * @return mixed
+	 */
+	public function restrict_public_rest_api( $dispatch_result, $request, $route, $handler ) {
+		if ( null !== $dispatch_result ) {
+			return $dispatch_result;
+		}
+
+		$blocked = get_option( 'apppresser_rest_blocked_endpoints', array() );
+
+		if ( ! is_array( $blocked ) || empty( $blocked ) ) {
+			return $dispatch_result;
+		}
+
+		if ( is_user_logged_in() || ! in_array( $route, $blocked, true ) ) {
+			return $dispatch_result;
+		}
+
+		return new WP_Error(
+			'apppresser_rest_restricted',
+			__( 'This REST API endpoint is restricted to authenticated users on this site.', 'apppresser-wp' ),
+			array( 'status' => rest_authorization_required_code() )
+		);
+	}
+
+	/**
+	 * Get the list of registered REST API routes.
+	 *
+	 * @return array<int, array{route: string, label: string, methods: array<int, string>, group: string}>
+	 */
+	private function get_rest_routes() {
+		if ( ! function_exists( 'rest_get_server' ) ) {
+			return array();
+		}
+
+		// Temporarily remove our endpoint filter so the full list is returned
+		// even when "Allowed Endpoints" mode is active. Otherwise blocked
+		// routes would vanish from the admin and could not be re-enabled.
+		$has_filter = has_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
+
+		if ( $has_filter ) {
+			remove_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
+		}
+
+		$routes = rest_get_server()->get_routes();
+
+		if ( $has_filter ) {
+			add_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
+		}
+
+		$result = array();
+
+		foreach ( $routes as $route => $handlers ) {
+			$methods   = array();
+			$is_public = true;
+
+			foreach ( $handlers as $handler ) {
+				if ( isset( $handler['methods'] ) ) {
+					$methods = array_merge( $methods, array_map( 'strtoupper', (array) $handler['methods'] ) );
+				}
+
+				if ( ! empty( $handler['permission_callback'] ) ) {
+					$is_public = false;
+				}
+			}
+
+			$methods = array_values( array_unique( array_filter( $methods ) ) );
+
+			$result[] = array(
+				'route'   => $route,
+				'label'   => $this->format_rest_route( $route ),
+				'methods' => $methods,
+				'group'   => $is_public ? 'public' : 'authenticated',
 			);
 		}
 
+		usort(
+			$result,
+			function ( $a, $b ) {
+				return strcmp( $a['route'], $b['route'] );
+			}
+		);
+
 		return $result;
+	}
+
+	/**
+	 * Convert a route's regex placeholders into a human-readable form.
+	 *
+	 * @param string $route The raw REST API route.
+	 * @return string
+	 */
+	private function format_rest_route( $route ) {
+		return preg_replace( '/\(\?P<([^>]+)>[^)]*\)/', '{$1}', $route );
 	}
 
 	/**
@@ -427,21 +580,23 @@ class AppPresser_Security {
 					'nonce'        => wp_create_nonce( 'apppresser_security_nonce' ),
 					'xmlrpcModes'  => $this->xmlrpc_modes,
 					'restApiModes' => $this->rest_api_modes,
+					'restRoutes'   => $this->get_rest_routes(),
 					'loginIdModes' => $this->login_id_modes,
 					'settings'     => array(
 						'xmlrpc_mode'                 => $this->get_xmlrpc_mode(),
 						'xmlrpc_multiauth'            => (bool) get_option( 'apppresser_xmlrpc_multiauth_enabled', false ),
-						'rest_api_access'              => $this->get_rest_api_access(),
-						'login_id_mode'                => $this->get_login_id_mode(),
-						'force_unique_nickname'        => (bool) get_option( 'apppresser_force_unique_nickname_enabled', false ),
-						'disable_extra_user_archives'  => (bool) get_option( 'apppresser_disable_extra_user_archives_enabled', true ),
-						'disable_generator_tag'        => (bool) get_option( 'apppresser_disable_generator_tag_enabled', false ),
-						'disable_rss_generator'        => (bool) get_option( 'apppresser_disable_rss_generator_enabled', false ),
-						'disable_resource_versions'    => (bool) get_option( 'apppresser_disable_resource_versions_enabled', false ),
-						'disable_shortlink'            => (bool) get_option( 'apppresser_disable_shortlink_enabled', false ),
-						'disable_emojis'               => (bool) get_option( 'apppresser_disable_emojis_enabled', false ),
-						'disable_wlw_manifest'         => (bool) get_option( 'apppresser_disable_wlw_manifest_enabled', false ),
-						'disable_rsd'                  => (bool) get_option( 'apppresser_disable_rsd_enabled', false ),
+						'rest_api_access'             => $this->get_rest_api_access(),
+						'rest_blocked_endpoints'      => get_option( 'apppresser_rest_blocked_endpoints', array() ),
+						'login_id_mode'               => $this->get_login_id_mode(),
+						'force_unique_nickname'       => (bool) get_option( 'apppresser_force_unique_nickname_enabled', false ),
+						'disable_extra_user_archives' => (bool) get_option( 'apppresser_disable_extra_user_archives_enabled', true ),
+						'disable_generator_tag'       => (bool) get_option( 'apppresser_disable_generator_tag_enabled', false ),
+						'disable_rss_generator'       => (bool) get_option( 'apppresser_disable_rss_generator_enabled', false ),
+						'disable_resource_versions'   => (bool) get_option( 'apppresser_disable_resource_versions_enabled', false ),
+						'disable_shortlink'           => (bool) get_option( 'apppresser_disable_shortlink_enabled', false ),
+						'disable_emojis'              => (bool) get_option( 'apppresser_disable_emojis_enabled', false ),
+						'disable_wlw_manifest'        => (bool) get_option( 'apppresser_disable_wlw_manifest_enabled', false ),
+						'disable_rsd'                 => (bool) get_option( 'apppresser_disable_rsd_enabled', false ),
 					),
 				)
 			);
@@ -501,6 +656,20 @@ class AppPresser_Security {
 				}
 
 				update_option( 'apppresser_login_id_mode', $value );
+				break;
+
+			case 'rest_blocked_endpoints':
+				$raw_value = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '[]';
+				$value     = json_decode( $raw_value, true );
+
+				if ( ! is_array( $value ) ) {
+					$value = array();
+				}
+
+				$valid_routes = wp_list_pluck( $this->get_rest_routes(), 'route' );
+				$value        = array_values( array_intersect( $value, $valid_routes ) );
+
+				update_option( 'apppresser_rest_blocked_endpoints', $value );
 				break;
 
 			default:
