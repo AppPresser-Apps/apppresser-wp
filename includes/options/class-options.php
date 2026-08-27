@@ -65,11 +65,19 @@ class AppPresser_Options {
 			'label' => 'Enable LLM .md URLs',
 			'help'  => 'Allow posts and pages to be accessed as Markdown by appending .md to the URL (e.g. /hello-world.md). After enabling, go to Settings > Permalinks and click Save Changes.',
 		),
-		'header_banner'                               => array(
+		'allow_editor_site_editor'                   => array(
+			'label' => 'Allow Editors to Access Full Site Editor',
+			'help'  => 'Grant the editor role access to the full site editor (Appearance > Editor) without giving them administrator privileges.',
+		),
+		'send_admin_login_email'                     => array(
+			'label' => 'Send Admin Email When a User Logs In',
+			'help'  => 'Send an email notification to the selected super admin whenever a user logs in.',
+		),
+		'header_banner'                              => array(
 			'label' => 'Enable Header Banner',
 			'help'  => 'Display a thin banner above the site header. Use the Banner Content panel below to edit the banner text.',
 		),
-		'smtp'                                        => array(
+		'smtp'                                       => array(
 			'label' => 'Enable Custom SMTP',
 			'help'  => 'Send outgoing mail through the SMTP server configured below instead of the default mail transport.',
 		),
@@ -137,6 +145,7 @@ class AppPresser_Options {
 		add_action( 'wp_ajax_apppresser_options_save_banner_text_color', array( $this, 'handle_save_banner_text_color' ) );
 		add_action( 'wp_ajax_apppresser_options_save_smtp', array( $this, 'handle_save_smtp' ) );
 		add_action( 'wp_ajax_apppresser_options_save_custom_code', array( $this, 'handle_save_custom_code' ) );
+		add_action( 'wp_ajax_apppresser_options_save_login_email_recipient', array( $this, 'handle_save_login_email_recipient' ) );
 
 		// Output custom header/body/footer code.
 		add_action( 'wp_head', array( $this, 'render_custom_header_code' ), 999 );
@@ -190,6 +199,16 @@ class AppPresser_Options {
 			add_action( 'init', array( $this, 'add_markdown_rewrite_rule' ) );
 			add_filter( 'query_vars', array( $this, 'add_markdown_query_var' ) );
 			add_action( 'template_redirect', array( $this, 'handle_markdown_request' ) );
+		}
+
+		// Allow editors to access the full site editor if enabled.
+		if ( get_option( 'apppresser_allow_editor_site_editor_enabled', false ) ) {
+			add_filter( 'user_has_cap', array( $this, 'grant_editor_site_editor_cap' ), 10, 4 );
+		}
+
+		// Send an admin email on login if enabled.
+		if ( get_option( 'apppresser_send_admin_login_email_enabled', false ) ) {
+			add_action( 'wp_login', array( $this, 'send_admin_login_email' ), 10, 2 );
 		}
 
 		// Apply header banner if enabled.
@@ -264,22 +283,24 @@ class AppPresser_Options {
 				'apppresser-options',
 				'apppresserOptions',
 				array(
-					'settings'           => $settings,
-					'options'            => $this->options,
-					'ajaxUrl'            => admin_url( 'admin-ajax.php' ),
-					'nonce'              => wp_create_nonce( 'apppresser_options_nonce' ),
-					'bannerContent'      => get_option( 'apppresser_header_banner_content', '' ),
-					'bannerColor'        => get_option( 'apppresser_header_banner_color', '#1e1e1e' ),
-					'bannerTextColor'    => get_option( 'apppresser_header_banner_text_color', '#ffffff' ),
-					'smtpFields'         => $this->smtp_fields,
-					'smtpSettings'       => $smtp_settings,
-					'smtpConfigured'     => $this->is_smtp_configured(),
-					'customCode'         => array(
+					'settings'            => $settings,
+					'options'             => $this->options,
+					'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
+					'nonce'               => wp_create_nonce( 'apppresser_options_nonce' ),
+					'bannerContent'       => get_option( 'apppresser_header_banner_content', '' ),
+					'bannerColor'         => get_option( 'apppresser_header_banner_color', '#1e1e1e' ),
+					'bannerTextColor'     => get_option( 'apppresser_header_banner_text_color', '#ffffff' ),
+					'smtpFields'          => $this->smtp_fields,
+					'smtpSettings'        => $smtp_settings,
+					'smtpConfigured'      => $this->is_smtp_configured(),
+					'customCode'          => array(
 						'header' => get_option( 'apppresser_custom_code_header', '' ),
 						'body'   => get_option( 'apppresser_custom_code_body', '' ),
 						'footer' => get_option( 'apppresser_custom_code_footer', '' ),
 					),
-					'codeEditorSettings' => $code_editor_settings,
+					'codeEditorSettings'  => $code_editor_settings,
+					'loginEmailAdmins'    => $this->get_admin_users(),
+					'loginEmailRecipient' => get_option( 'apppresser_send_admin_login_email_recipient', '' ),
 				)
 			);
 
@@ -474,6 +495,31 @@ class AppPresser_Options {
 	}
 
 	/**
+	 * AJAX handler for saving the login email recipient.
+	 */
+	public function handle_save_login_email_recipient() {
+		check_ajax_referer( 'apppresser_options_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$value = isset( $_POST['value'] ) ? absint( $_POST['value'] ) : 0;
+
+		if ( $value && ! is_super_admin( $value ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid recipient.' ), 400 );
+		}
+
+		update_option( 'apppresser_send_admin_login_email_recipient', $value );
+
+		wp_send_json_success(
+			array(
+				'value' => $value,
+			)
+		);
+	}
+
+	/**
 	 * Whether the required SMTP fields (host, username, password) are filled in.
 	 *
 	 * @return bool
@@ -522,6 +568,95 @@ class AppPresser_Options {
 		if ( ! empty( $from_email ) && is_email( $from_email ) ) {
 			$phpmailer->setFrom( $from_email, $from_name ? $from_name : $from_email );
 		}
+	}
+
+	/**
+	 * Get the list of super admins available as login email recipients.
+	 *
+	 * On multisite this returns network super admins; on single site it falls
+	 * back to the administrator role.
+	 *
+	 * @return array<int, array{value: string, label: string}>
+	 */
+	private function get_admin_users() {
+		$result = array();
+
+		if ( is_multisite() ) {
+			foreach ( get_super_admins() as $login ) {
+				$user = get_user_by( 'login', $login );
+
+				if ( $user ) {
+					$result[] = array(
+						'value' => (string) $user->ID,
+						'label' => $user->display_name . ' (' . $user->user_email . ')',
+					);
+				}
+			}
+
+			return $result;
+		}
+
+		$admins = get_users(
+			array(
+				'role'   => 'administrator',
+				'fields' => array( 'ID', 'display_name', 'user_email' ),
+			)
+		);
+
+		foreach ( $admins as $admin ) {
+			$result[] = array(
+				'value' => (string) $admin->ID,
+				'label' => $admin->display_name . ' (' . $admin->user_email . ')',
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Send an email to the configured administrator when a user logs in.
+	 *
+	 * @param string  $user_login The username of the user who logged in.
+	 * @param WP_User $user       The user object.
+	 */
+	public function send_admin_login_email( $user_login, $user ) {
+		$recipient_id = (int) get_option( 'apppresser_send_admin_login_email_recipient', 0 );
+
+		if ( ! $recipient_id ) {
+			return;
+		}
+
+		$recipient = get_userdata( $recipient_id );
+
+		if ( ! $recipient ) {
+			return;
+		}
+
+		$site_name = get_bloginfo( 'name' );
+
+		$subject = sprintf(
+			/* translators: 1: site name, 2: user login. */
+			__( '[%1$s] User login: %2$s', 'apppresser-wp' ),
+			$site_name,
+			$user_login
+		);
+
+		$message  = sprintf( __( 'A user has logged in to %s.', 'apppresser-wp' ), $site_name ) . "\n\n";
+		$message .= sprintf( __( 'User: %s', 'apppresser-wp' ), $user_login ) . "\n";
+		$message .= sprintf( __( 'Display name: %s', 'apppresser-wp' ), $user->display_name ) . "\n";
+		$message .= sprintf( __( 'IP address: %s', 'apppresser-wp' ), $this->get_client_ip() ) . "\n";
+		$message .= sprintf( __( 'Time: %s', 'apppresser-wp' ), current_time( 'mysql' ) );
+
+		wp_mail( $recipient->user_email, $subject, $message );
+	}
+
+	/**
+	 * Get the client IP address for the current request.
+	 *
+	 * @return string
+	 */
+	private function get_client_ip() {
+		return isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 	}
 
 	/**
@@ -666,6 +801,23 @@ class AppPresser_Options {
 
 		// Remove comments from admin menu.
 		add_action( 'admin_menu', array( $this, 'remove_comments_admin_menu' ), 999 );
+	}
+
+	/**
+	 * Grant the editor role access to the full site editor.
+	 *
+	 * @param array   $allcaps All capabilities of the user.
+	 * @param array   $caps    Capabilities being checked.
+	 * @param array   $args    Additional context for the capability check.
+	 * @param WP_User $user    The user object.
+	 * @return array
+	 */
+	public function grant_editor_site_editor_cap( $allcaps, $caps, $args, $user ) {
+		if ( in_array( 'edit_theme_options', $caps, true ) && in_array( 'editor', (array) $user->roles, true ) ) {
+			$allcaps['edit_theme_options'] = true;
+		}
+
+		return $allcaps;
 	}
 
 	/**

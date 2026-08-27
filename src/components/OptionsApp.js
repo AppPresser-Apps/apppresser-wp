@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { Panel, PanelBody, PanelRow, ToggleControl, ColorPalette, Button, TextControl, TextareaControl, SelectControl, BaseControl, Popover } from '@wordpress/components';
 
-const { settings, options, ajaxUrl, nonce, bannerContent, bannerColor, bannerTextColor: initialBannerTextColor, smtpFields, smtpSettings, customCode, codeEditorSettings } = window.apppresserOptions || {};
+const { settings, options, ajaxUrl, nonce, bannerContent, bannerColor, bannerTextColor: initialBannerTextColor, smtpFields, smtpSettings, customCode, codeEditorSettings, loginEmailAdmins, loginEmailRecipient: initialLoginEmailRecipient } = window.apppresserOptions || {};
 
 const CUSTOM_CODE_SECTIONS = [
 	{ key: 'header', label: __( 'Header', 'apppresser-wp' ), help: __( 'These scripts will be printed in the <head> section.', 'apppresser-wp' ) },
@@ -89,6 +89,8 @@ const OptionsApp = () => {
 
 	const [ customCodeValues, setCustomCodeValues ] = useState( () => ( { ...( customCode || {} ) } ) );
 	const [ customCodeSavingField, setCustomCodeSavingField ] = useState( null );
+
+	const [ loginEmailRecipient, setLoginEmailRecipient ] = useState( initialLoginEmailRecipient || '' );
 
 	// Link popover state.
 	const [ linkPopover, setLinkPopover ] = useState( null );
@@ -224,6 +226,20 @@ const OptionsApp = () => {
 		} );
 	};
 
+	const handleLoginEmailRecipientChange = ( value ) => {
+		setLoginEmailRecipient( value );
+
+		const formData = new FormData();
+		formData.append( 'action', 'apppresser_options_save_login_email_recipient' );
+		formData.append( 'nonce', nonce );
+		formData.append( 'value', value || '' );
+
+		fetch( ajaxUrl, {
+			method: 'POST',
+			body: formData,
+		} );
+	};
+
 	const openLinkPopover = () => {
 		const sel = window.getSelection();
 		if ( ! sel || sel.rangeCount === 0 || ! editorRef.current ) return;
@@ -328,15 +344,18 @@ const OptionsApp = () => {
 
 	const smtpFilled = SMTP_REQUIRED_FIELDS.every( ( key ) => Boolean( smtp[ key ] && smtp[ key ].trim() ) );
 
-	// Separate the header_banner and smtp options from the general toggles.
+	// Separate the header_banner, smtp and login email options from the general toggles.
 	const generalOptions = {};
 	let bannerOption = null;
 	let smtpOption = null;
+	let loginEmailOption = null;
 	Object.entries( options ).forEach( ( [ key, data ] ) => {
 		if ( key === 'header_banner' ) {
 			bannerOption = { key, ...data };
 		} else if ( key === 'smtp' ) {
 			smtpOption = { key, ...data };
+		} else if ( key === 'send_admin_login_email' ) {
+			loginEmailOption = { key, ...data };
 		} else {
 			generalOptions[ key ] = data;
 		}
@@ -488,6 +507,38 @@ const OptionsApp = () => {
 							</div>
 						</PanelRow>
 					) ) }
+				</PanelBody>
+			) }
+
+			{ loginEmailOption && (
+				<PanelBody
+					title={ __( 'Login Notifications', 'apppresser-wp' ) }
+					initialOpen={ false }
+				>
+					<PanelRow>
+						<ToggleControl
+							label={ loginEmailOption.label }
+							help={ loginEmailOption.help }
+							checked={ toggles[ loginEmailOption.key ] || false }
+							onChange={ ( value ) => handleToggle( loginEmailOption.key, value ) }
+						/>
+					</PanelRow>
+					<PanelRow>
+						<div style={ { width: '100%' } }>
+							<SelectControl
+								label={ __( 'Recipient', 'apppresser-wp' ) }
+								value={ loginEmailRecipient }
+								options={ [
+									{ label: __( 'Select a super admin…', 'apppresser-wp' ), value: '' },
+									...( loginEmailAdmins || [] ).map( ( admin ) => ( {
+										label: admin.label,
+										value: admin.value,
+									} ) ),
+								] }
+								onChange={ handleLoginEmailRecipientChange }
+							/>
+						</div>
+					</PanelRow>
 				</PanelBody>
 			) }
 
