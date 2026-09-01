@@ -99,6 +99,9 @@ class AppPresser_Security {
 		'disable_emojis'              => 'apppresser_disable_emojis_enabled',
 		'disable_wlw_manifest'        => 'apppresser_disable_wlw_manifest_enabled',
 		'disable_rsd'                 => 'apppresser_disable_rsd_enabled',
+		'botblock_enabled'            => 'apppresser_botblock_enabled',
+		'botblock_gf_url_block'       => 'apppresser_botblock_gf_url_block',
+		'botblock_time_trap'          => 'apppresser_botblock_time_trap',
 	);
 
 	/**
@@ -108,6 +111,8 @@ class AppPresser_Security {
 		add_action( 'admin_menu', array( $this, 'add_admin_page' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_ajax_apppresser_security_save_setting', array( $this, 'handle_save_setting' ) );
+		add_action( 'wp_ajax_apppresser_security_bot_manual_ban', array( $this, 'handle_bot_manual_ban' ) );
+		add_action( 'wp_ajax_apppresser_security_bot_unban', array( $this, 'handle_bot_unban' ) );
 
 		$xmlrpc_mode = $this->get_xmlrpc_mode();
 
@@ -137,6 +142,10 @@ class AppPresser_Security {
 			remove_filter( 'authenticate', 'wp_authenticate_username_password', 20 );
 		} elseif ( 'username' === $login_id_mode ) {
 			remove_filter( 'authenticate', 'wp_authenticate_email_password', 20 );
+		}
+
+		if ( 'default' !== $login_id_mode ) {
+			add_filter( 'gettext', array( $this, 'filter_login_label' ), 10, 3 );
 		}
 
 		if ( get_option( 'apppresser_force_unique_nickname_enabled', false ) ) {
@@ -205,6 +214,44 @@ class AppPresser_Security {
 	 */
 	private function get_login_id_mode() {
 		return get_option( 'apppresser_login_id_mode', 'default' );
+	}
+
+	/**
+	 * Update the login form label to match the configured login identifier mode.
+	 *
+	 * @param string $translation Translated text.
+	 * @param string $text        Text to translate.
+	 * @param string $domain      Text domain.
+	 * @return string
+	 */
+	public function filter_login_label( $translation, $text, $domain ) {
+		if ( 'default' !== $domain ) {
+			return $translation;
+		}
+
+		$mode = $this->get_login_id_mode();
+
+		if ( 'email' === $mode ) {
+			if ( 'Username or Email Address' === $text ) {
+				return __( 'Email Address', 'apppresser-wp' );
+			}
+
+			if ( 'Please enter your username or email address. You will receive an email message with instructions on how to reset your password.' === $text ) {
+				return __( 'Please enter your email address. You will receive an email message with instructions on how to reset your password.', 'apppresser-wp' );
+			}
+		}
+
+		if ( 'username' === $mode ) {
+			if ( 'Username or Email Address' === $text ) {
+				return __( 'Username', 'apppresser-wp' );
+			}
+
+			if ( 'Please enter your username or email address. You will receive an email message with instructions on how to reset your password.' === $text ) {
+				return __( 'Please enter your username. You will receive an email message with instructions on how to reset your password.', 'apppresser-wp' );
+			}
+		}
+
+		return $translation;
 	}
 
 	/**
@@ -564,6 +611,9 @@ class AppPresser_Security {
 		if ( file_exists( $asset_file ) ) {
 			$asset = require $asset_file;
 
+			$botblock_settings    = AppPresser_Bot_Rate_Limiter::get_settings();
+			$limit_login_settings = AppPresser_Limit_Login::get_settings();
+
 			wp_enqueue_script(
 				'apppresser-security',
 				APPRESSER_WP_URL . '/build/index.js',
@@ -582,21 +632,39 @@ class AppPresser_Security {
 					'restApiModes' => $this->rest_api_modes,
 					'restRoutes'   => $this->get_rest_routes(),
 					'loginIdModes' => $this->login_id_modes,
+					'gfActive'     => class_exists( 'GFForms' ),
+					'botBans'      => $this->get_active_bans_data(),
 					'settings'     => array(
-						'xmlrpc_mode'                 => $this->get_xmlrpc_mode(),
-						'xmlrpc_multiauth'            => (bool) get_option( 'apppresser_xmlrpc_multiauth_enabled', false ),
-						'rest_api_access'             => $this->get_rest_api_access(),
-						'rest_blocked_endpoints'      => get_option( 'apppresser_rest_blocked_endpoints', array() ),
-						'login_id_mode'               => $this->get_login_id_mode(),
-						'force_unique_nickname'       => (bool) get_option( 'apppresser_force_unique_nickname_enabled', false ),
-						'disable_extra_user_archives' => (bool) get_option( 'apppresser_disable_extra_user_archives_enabled', true ),
-						'disable_generator_tag'       => (bool) get_option( 'apppresser_disable_generator_tag_enabled', false ),
-						'disable_rss_generator'       => (bool) get_option( 'apppresser_disable_rss_generator_enabled', false ),
-						'disable_resource_versions'   => (bool) get_option( 'apppresser_disable_resource_versions_enabled', false ),
-						'disable_shortlink'           => (bool) get_option( 'apppresser_disable_shortlink_enabled', false ),
-						'disable_emojis'              => (bool) get_option( 'apppresser_disable_emojis_enabled', false ),
-						'disable_wlw_manifest'        => (bool) get_option( 'apppresser_disable_wlw_manifest_enabled', false ),
-						'disable_rsd'                 => (bool) get_option( 'apppresser_disable_rsd_enabled', false ),
+						'xmlrpc_mode'                    => $this->get_xmlrpc_mode(),
+						'xmlrpc_multiauth'               => (bool) get_option( 'apppresser_xmlrpc_multiauth_enabled', false ),
+						'rest_api_access'                => $this->get_rest_api_access(),
+						'rest_blocked_endpoints'         => get_option( 'apppresser_rest_blocked_endpoints', array() ),
+						'login_id_mode'                  => $this->get_login_id_mode(),
+						'force_unique_nickname'          => (bool) get_option( 'apppresser_force_unique_nickname_enabled', false ),
+						'disable_extra_user_archives'    => (bool) get_option( 'apppresser_disable_extra_user_archives_enabled', true ),
+						'disable_generator_tag'          => (bool) get_option( 'apppresser_disable_generator_tag_enabled', false ),
+						'disable_rss_generator'          => (bool) get_option( 'apppresser_disable_rss_generator_enabled', false ),
+						'disable_resource_versions'      => (bool) get_option( 'apppresser_disable_resource_versions_enabled', false ),
+						'disable_shortlink'              => (bool) get_option( 'apppresser_disable_shortlink_enabled', false ),
+						'disable_emojis'                 => (bool) get_option( 'apppresser_disable_emojis_enabled', false ),
+						'disable_wlw_manifest'           => (bool) get_option( 'apppresser_disable_wlw_manifest_enabled', false ),
+						'disable_rsd'                    => (bool) get_option( 'apppresser_disable_rsd_enabled', false ),
+						'botblock_enabled'               => $botblock_settings['enabled'],
+						'botblock_max_requests'          => $botblock_settings['max_requests'],
+						'botblock_window'                => $botblock_settings['window'],
+						'botblock_ban_length'            => (int) round( $botblock_settings['ban_length'] / 60 ),
+						'botblock_whitelist'             => $botblock_settings['whitelist'],
+						'botblock_blocked_ip_ranges'     => $botblock_settings['blocked_ip_ranges'],
+						'botblock_gf_url_block'          => $botblock_settings['gf_url_block'],
+						'botblock_time_trap'             => $botblock_settings['time_trap'],
+						'botblock_time_trap_seconds'     => $botblock_settings['time_trap_seconds'],
+						'botblock_blocked_words'         => $botblock_settings['blocked_words'],
+						'botblock_blocked_email_domains' => $botblock_settings['blocked_email_domains'],
+						'limit_login_allowed_retries'    => $limit_login_settings['allowed_retries'],
+						'limit_login_lockout_minutes'    => $limit_login_settings['lockout_minutes'],
+						'limit_login_allowed_lockouts'   => $limit_login_settings['allowed_lockouts'],
+						'limit_login_long_lockout_hours' => $limit_login_settings['long_lockout_hours'],
+						'limit_login_reset_hours'        => $limit_login_settings['reset_hours'],
 					),
 				)
 			);
@@ -672,6 +740,134 @@ class AppPresser_Security {
 				update_option( 'apppresser_rest_blocked_endpoints', $value );
 				break;
 
+			case 'botblock_max_requests':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 3;
+				update_option( 'apppresser_botblock_max_requests', $value );
+				break;
+
+			case 'botblock_window':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 60;
+				update_option( 'apppresser_botblock_window', $value );
+				break;
+
+			case 'botblock_ban_length':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 15;
+				update_option( 'apppresser_botblock_ban_length', $value );
+				break;
+
+			case 'botblock_time_trap_seconds':
+				$value = isset( $_POST['value'] ) ? max( 0, (int) $_POST['value'] ) : 2;
+				update_option( 'apppresser_botblock_time_trap_seconds', $value );
+				break;
+
+			case 'botblock_whitelist':
+				$raw_value = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '[]';
+				$decoded   = json_decode( $raw_value, true );
+				$value     = array();
+
+				if ( is_array( $decoded ) ) {
+					foreach ( $decoded as $line ) {
+						$line = trim( (string) $line );
+
+						if ( '' !== $line && filter_var( $line, FILTER_VALIDATE_IP ) ) {
+							$value[] = $line;
+						}
+					}
+				}
+
+				update_option( 'apppresser_botblock_whitelist', $value );
+				break;
+
+			case 'botblock_blocked_ip_ranges':
+				$raw_value = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '[]';
+				$decoded   = json_decode( $raw_value, true );
+				$value     = array();
+
+				if ( is_array( $decoded ) ) {
+					foreach ( $decoded as $line ) {
+						$line = trim( (string) $line );
+
+						if ( '' === $line ) {
+							continue;
+						}
+
+						if ( false !== strpos( $line, '/' ) ) {
+							list( $range_ip, $bits ) = explode( '/', $line, 2 );
+
+							if ( filter_var( $range_ip, FILTER_VALIDATE_IP ) && ctype_digit( $bits ) ) {
+								$value[] = $line;
+							}
+						} elseif ( filter_var( $line, FILTER_VALIDATE_IP ) ) {
+							$value[] = $line;
+						}
+					}
+				}
+
+				update_option( 'apppresser_botblock_blocked_ip_ranges', $value );
+				break;
+
+			case 'botblock_blocked_words':
+				$raw_value = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '[]';
+				$decoded   = json_decode( $raw_value, true );
+				$value     = array();
+
+				if ( is_array( $decoded ) ) {
+					foreach ( $decoded as $word ) {
+						$word = trim( sanitize_text_field( (string) $word ) );
+
+						if ( '' !== $word ) {
+							$value[] = $word;
+						}
+					}
+				}
+
+				update_option( 'apppresser_botblock_blocked_words', $value );
+				break;
+
+			case 'botblock_blocked_email_domains':
+				$raw_value = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '[]';
+				$decoded   = json_decode( $raw_value, true );
+				$value     = array();
+
+				if ( is_array( $decoded ) ) {
+					foreach ( $decoded as $domain ) {
+						$domain = strtolower( trim( sanitize_text_field( (string) $domain ) ) );
+						$domain = preg_replace( '/^@/', '', $domain );
+
+						if ( '' !== $domain ) {
+							$value[] = $domain;
+						}
+					}
+				}
+
+				update_option( 'apppresser_botblock_blocked_email_domains', $value );
+				break;
+
+			case 'limit_login_allowed_retries':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 4;
+				update_option( AppPresser_Limit_Login::OPTION_ALLOWED_RETRIES, $value );
+				break;
+
+			case 'limit_login_lockout_minutes':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 20;
+				update_option( AppPresser_Limit_Login::OPTION_LOCKOUT_MINUTES, $value );
+				break;
+
+			case 'limit_login_allowed_lockouts':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 4;
+				update_option( AppPresser_Limit_Login::OPTION_ALLOWED_LOCKOUTS, $value );
+				break;
+
+			case 'limit_login_long_lockout_hours':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 24;
+				update_option( AppPresser_Limit_Login::OPTION_LONG_LOCKOUT_HOURS, $value );
+				break;
+
+			case 'limit_login_reset_hours':
+				$value = isset( $_POST['value'] ) ? max( 1, (int) $_POST['value'] ) : 12;
+				update_option( AppPresser_Limit_Login::OPTION_RESET_HOURS, $value );
+				break;
+
 			default:
 				if ( ! array_key_exists( $key, $this->boolean_settings ) ) {
 					wp_send_json_error( array( 'message' => 'Invalid setting key.' ), 400 );
@@ -687,6 +883,70 @@ class AppPresser_Security {
 				'value' => $value,
 			)
 		);
+	}
+
+	/**
+	 * AJAX handler for manually banning an IP from the bot-block panel.
+	 */
+	public function handle_bot_manual_ban() {
+		check_ajax_referer( 'apppresser_security_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$ip = isset( $_POST['ip'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['ip'] ) ) ) : '';
+
+		if ( ! filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			wp_send_json_error( array( 'message' => __( 'Please enter a valid IP address.', 'apppresser-wp' ) ), 400 );
+		}
+
+		$minutes = isset( $_POST['minutes'] ) ? max( 1, (int) $_POST['minutes'] ) : 60;
+
+		AppPresser_Bot_Ban_Store::ban( md5( 'ip_' . $ip ), $ip, $minutes * 60, 'manual' );
+
+		wp_send_json_success( array( 'bans' => $this->get_active_bans_data() ) );
+	}
+
+	/**
+	 * AJAX handler for unbanning an IP from the bot-block panel.
+	 */
+	public function handle_bot_unban() {
+		check_ajax_referer( 'apppresser_security_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		$id = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
+
+		if ( $id ) {
+			AppPresser_Bot_Ban_Store::unban( $id );
+		}
+
+		wp_send_json_success( array( 'bans' => $this->get_active_bans_data() ) );
+	}
+
+	/**
+	 * Format currently active bans for the JS panel.
+	 *
+	 * @return array<int, array{id: int, ip: string, reason: string, created_at: string, expires_at: string}>
+	 */
+	private function get_active_bans_data() {
+		$bans   = AppPresser_Bot_Ban_Store::get_active_bans();
+		$result = array();
+
+		foreach ( $bans as $ban ) {
+			$result[] = array(
+				'id'         => (int) $ban->id,
+				'ip'         => $ban->ip,
+				'reason'     => $ban->reason,
+				'created_at' => get_date_from_gmt( $ban->created_at ),
+				'expires_at' => get_date_from_gmt( $ban->expires_at ),
+			);
+		}
+
+		return $result;
 	}
 
 	/**

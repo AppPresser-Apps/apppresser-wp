@@ -3,9 +3,30 @@
  */
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { Panel, PanelBody, PanelRow, SelectControl, CheckboxControl, RadioControl, Button } from '@wordpress/components';
+import { Panel, PanelBody, PanelRow, SelectControl, CheckboxControl, RadioControl, Button, TextControl, TextareaControl, Notice } from '@wordpress/components';
 
-const { settings, xmlrpcModes, restApiModes, restRoutes, loginIdModes, ajaxUrl, nonce } = window.apppresserSecurity || {};
+const { settings, xmlrpcModes, restApiModes, restRoutes, loginIdModes, ajaxUrl, nonce, gfActive, botBans } = window.apppresserSecurity || {};
+
+/**
+ * A text/number/textarea field that only pushes its value up (and saves)
+ * on blur, so free-typing doesn't fire a save request per keystroke.
+ */
+const DeferredField = ( { as: Field = TextControl, value, onCommit, ...props } ) => {
+	const [ draft, setDraft ] = useState( value );
+
+	return (
+		<Field
+			{ ...props }
+			value={ draft }
+			onChange={ setDraft }
+			onBlur={ () => {
+				if ( draft !== value ) {
+					onCommit( draft );
+				}
+			} }
+		/>
+	);
+};
 
 const SecurityApp = () => {
 	const [ values, setValues ] = useState( () => ( { ...( settings || {} ) } ) );
@@ -35,6 +56,50 @@ const SecurityApp = () => {
 			} )
 			.catch( () => {
 				setValues( ( prev ) => ( { ...prev, [ key ]: previous } ) );
+			} );
+	};
+
+	const [ bans, setBans ] = useState( () => botBans || [] );
+	const [ manualBanIp, setManualBanIp ] = useState( '' );
+	const [ manualBanMinutes, setManualBanMinutes ] = useState( '60' );
+	const [ banError, setBanError ] = useState( '' );
+
+	const linesToArray = ( text ) => text.split( /[\r\n]+/ ).map( ( line ) => line.trim() ).filter( Boolean );
+	const csvToArray = ( text ) => text.split( ',' ).map( ( item ) => item.trim() ).filter( Boolean );
+
+	const submitManualBan = () => {
+		setBanError( '' );
+
+		const formData = new FormData();
+		formData.append( 'action', 'apppresser_security_bot_manual_ban' );
+		formData.append( 'nonce', nonce );
+		formData.append( 'ip', manualBanIp );
+		formData.append( 'minutes', manualBanMinutes );
+
+		fetch( ajaxUrl, { method: 'POST', body: formData } )
+			.then( ( response ) => response.json() )
+			.then( ( data ) => {
+				if ( data && data.success ) {
+					setBans( data.data.bans );
+					setManualBanIp( '' );
+				} else {
+					setBanError( ( data && data.data && data.data.message ) || __( 'Please enter a valid IP address.', 'apppresser-wp' ) );
+				}
+			} );
+	};
+
+	const unbanIp = ( id ) => {
+		const formData = new FormData();
+		formData.append( 'action', 'apppresser_security_bot_unban' );
+		formData.append( 'nonce', nonce );
+		formData.append( 'id', id );
+
+		fetch( ajaxUrl, { method: 'POST', body: formData } )
+			.then( ( response ) => response.json() )
+			.then( ( data ) => {
+				if ( data && data.success ) {
+					setBans( data.data.bans );
+				}
 			} );
 	};
 
@@ -299,6 +364,269 @@ const SecurityApp = () => {
 							'apppresser-wp'
 						) }
 					/>
+				</PanelRow>
+			</PanelBody>
+
+			<PanelBody
+				title={ __( 'Bot Block', 'apppresser-wp' ) }
+				initialOpen={ true }
+			>
+				<PanelRow>
+					<CheckboxControl
+						label={ __( 'Enable POST Rate Limiting', 'apppresser-wp' ) }
+						checked={ Boolean( values.botblock_enabled ) }
+						onChange={ ( value ) => saveSetting( 'botblock_enabled', value ) }
+						help={ __(
+							'Rate-limits and temporarily bans visitors who submit too many POST requests (e.g. forms) in a short window. Admins are never rate limited.',
+							'apppresser-wp'
+						) }
+					/>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%', display: 'flex', gap: '16px' } }>
+						<DeferredField
+							label={ __( 'Max POST Requests', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.botblock_max_requests ?? 3 ) }
+							onCommit={ ( value ) => saveSetting( 'botblock_max_requests', Math.max( 1, parseInt( value, 10 ) || 3 ) ) }
+						/>
+						<DeferredField
+							label={ __( 'Time Window (seconds)', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.botblock_window ?? 60 ) }
+							onCommit={ ( value ) => saveSetting( 'botblock_window', Math.max( 1, parseInt( value, 10 ) || 60 ) ) }
+						/>
+						<DeferredField
+							label={ __( 'Ban Length (minutes)', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.botblock_ban_length ?? 15 ) }
+							onCommit={ ( value ) => saveSetting( 'botblock_ban_length', Math.max( 1, parseInt( value, 10 ) || 15 ) ) }
+						/>
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<DeferredField
+							as={ TextareaControl }
+							label={ __( 'Whitelisted IPs', 'apppresser-wp' ) }
+							value={ ( values.botblock_whitelist || [] ).join( '\n' ) }
+							onCommit={ ( value ) => saveSetting( 'botblock_whitelist', linesToArray( value ) ) }
+							help={ __( 'One IP address per line. These IPs are never rate limited.', 'apppresser-wp' ) }
+						/>
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<DeferredField
+							as={ TextareaControl }
+							label={ __( 'Blocked IPs / Ranges', 'apppresser-wp' ) }
+							value={ ( values.botblock_blocked_ip_ranges || [] ).join( '\n' ) }
+							onCommit={ ( value ) => saveSetting( 'botblock_blocked_ip_ranges', linesToArray( value ) ) }
+							help={ __(
+								'One IP or CIDR range per line (e.g. 203.0.113.1 or 3.0.0.0/8). Requests from these are rejected outright and never expire.',
+								'apppresser-wp'
+							) }
+						/>
+					</div>
+				</PanelRow>
+
+				{ gfActive && (
+					<>
+						<PanelRow>
+							<div style={ { width: '100%' } }>
+								<h4>{ __( 'Gravity Forms', 'apppresser-wp' ) }</h4>
+							</div>
+						</PanelRow>
+						<PanelRow>
+							<CheckboxControl
+								label={ __( 'Reject URLs/Links in Name and Text Fields', 'apppresser-wp' ) }
+								checked={ Boolean( values.botblock_gf_url_block ) }
+								onChange={ ( value ) => saveSetting( 'botblock_gf_url_block', value ) }
+							/>
+						</PanelRow>
+						<PanelRow>
+							<div style={ { width: '100%' } }>
+								<CheckboxControl
+									label={ __( 'Reject Submissions Filled Out Too Fast (Time Trap)', 'apppresser-wp' ) }
+									checked={ Boolean( values.botblock_time_trap ) }
+									onChange={ ( value ) => saveSetting( 'botblock_time_trap', value ) }
+								/>
+								<DeferredField
+									label={ __( 'Minimum Seconds Between Form Load and Submit', 'apppresser-wp' ) }
+									type="number"
+									min="0"
+									value={ String( values.botblock_time_trap_seconds ?? 2 ) }
+									onCommit={ ( value ) => saveSetting( 'botblock_time_trap_seconds', Math.max( 0, parseInt( value, 10 ) || 0 ) ) }
+								/>
+							</div>
+						</PanelRow>
+						<PanelRow>
+							<div style={ { width: '100%' } }>
+								<DeferredField
+									label={ __( 'Blocked Words', 'apppresser-wp' ) }
+									value={ ( values.botblock_blocked_words || [] ).join( ', ' ) }
+									onCommit={ ( value ) => saveSetting( 'botblock_blocked_words', csvToArray( value ) ) }
+									help={ __( 'Comma-separated list. Submissions containing any of these words are rejected.', 'apppresser-wp' ) }
+								/>
+							</div>
+						</PanelRow>
+						<PanelRow>
+							<div style={ { width: '100%' } }>
+								<DeferredField
+									label={ __( 'Blocked Email Domains', 'apppresser-wp' ) }
+									value={ ( values.botblock_blocked_email_domains || [] ).join( ', ' ) }
+									onCommit={ ( value ) => saveSetting( 'botblock_blocked_email_domains', csvToArray( value ) ) }
+									help={ __( 'Comma-separated list (e.g. mailinator.com, tempmail.com). Rejects Email fields using these domains.', 'apppresser-wp' ) }
+								/>
+							</div>
+						</PanelRow>
+					</>
+				) }
+
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<h4>{ __( 'Currently Banned IPs', 'apppresser-wp' ) }</h4>
+						{ bans.length === 0 ? (
+							<p>{ __( 'No active bans.', 'apppresser-wp' ) }</p>
+						) : (
+							<table className="wp-list-table widefat fixed striped">
+								<thead>
+									<tr>
+										<th>{ __( 'IP Address', 'apppresser-wp' ) }</th>
+										<th>{ __( 'Reason', 'apppresser-wp' ) }</th>
+										<th>{ __( 'Banned At', 'apppresser-wp' ) }</th>
+										<th>{ __( 'Expires', 'apppresser-wp' ) }</th>
+										<th>{ __( 'Action', 'apppresser-wp' ) }</th>
+									</tr>
+								</thead>
+								<tbody>
+									{ bans.map( ( ban ) => (
+										<tr key={ ban.id }>
+											<td>{ ban.ip }</td>
+											<td>{ ban.reason }</td>
+											<td>{ ban.created_at }</td>
+											<td>{ ban.expires_at }</td>
+											<td>
+												<Button isLink onClick={ () => unbanIp( ban.id ) }>
+													{ __( 'Unban', 'apppresser-wp' ) }
+												</Button>
+											</td>
+										</tr>
+									) ) }
+								</tbody>
+							</table>
+						) }
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<h4>{ __( 'Ban an IP', 'apppresser-wp' ) }</h4>
+						{ banError && (
+							<Notice status="error" isDismissible={ false }>
+								{ banError }
+							</Notice>
+						) }
+						<div style={ { display: 'flex', gap: '16px', alignItems: 'flex-end' } }>
+							<TextControl
+								label={ __( 'IP Address', 'apppresser-wp' ) }
+								value={ manualBanIp }
+								onChange={ setManualBanIp }
+								placeholder="203.0.113.1"
+							/>
+							<TextControl
+								label={ __( 'Duration (minutes)', 'apppresser-wp' ) }
+								type="number"
+								min="1"
+								value={ manualBanMinutes }
+								onChange={ setManualBanMinutes }
+							/>
+							<Button variant="secondary" onClick={ submitManualBan } disabled={ ! manualBanIp }>
+								{ __( 'Ban IP', 'apppresser-wp' ) }
+							</Button>
+						</div>
+					</div>
+				</PanelRow>
+			</PanelBody>
+
+			<PanelBody
+				title={ __( 'Limit Login Attempts', 'apppresser-wp' ) }
+				initialOpen={ true }
+			>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<DeferredField
+							label={ __( 'Allowed Retries', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.limit_login_allowed_retries ?? 4 ) }
+							onCommit={ ( value ) => saveSetting( 'limit_login_allowed_retries', Math.max( 1, parseInt( value, 10 ) || 4 ) ) }
+							help={ __(
+								'Number of failed login attempts allowed before the IP address is locked out.',
+								'apppresser-wp'
+							) }
+						/>
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<DeferredField
+							label={ __( 'Lockout Time (minutes)', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.limit_login_lockout_minutes ?? 20 ) }
+							onCommit={ ( value ) => saveSetting( 'limit_login_lockout_minutes', Math.max( 1, parseInt( value, 10 ) || 20 ) ) }
+							help={ __(
+								'How long an IP address is locked out after too many failed attempts.',
+								'apppresser-wp'
+							) }
+						/>
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%', display: 'flex', gap: '16px' } }>
+						<DeferredField
+							label={ __( 'Lockouts Before Increase', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.limit_login_allowed_lockouts ?? 4 ) }
+							onCommit={ ( value ) => saveSetting( 'limit_login_allowed_lockouts', Math.max( 1, parseInt( value, 10 ) || 4 ) ) }
+						/>
+						<DeferredField
+							label={ __( 'Increased Lockout Time (hours)', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.limit_login_long_lockout_hours ?? 24 ) }
+							onCommit={ ( value ) => saveSetting( 'limit_login_long_lockout_hours', Math.max( 1, parseInt( value, 10 ) || 24 ) ) }
+						/>
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<p className="description">
+							{ __(
+								'After the specified number of lockouts, the lockout time increases to the number of hours above.',
+								'apppresser-wp'
+							) }
+						</p>
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<DeferredField
+							label={ __( 'Hours Until Retries Reset', 'apppresser-wp' ) }
+							type="number"
+							min="1"
+							value={ String( values.limit_login_reset_hours ?? 12 ) }
+							onCommit={ ( value ) => saveSetting( 'limit_login_reset_hours', Math.max( 1, parseInt( value, 10 ) || 12 ) ) }
+							help={ __(
+								'Time in hours before failed-attempt counters are reset.',
+								'apppresser-wp'
+							) }
+						/>
+					</div>
 				</PanelRow>
 			</PanelBody>
 		</Panel>

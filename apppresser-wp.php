@@ -67,6 +67,59 @@ new AppPresser_Options();
 require_once APPRESSER_WP_DIR . 'includes/security/class-security.php';
 new AppPresser_Security();
 
+// Load limit login module (failed login lockout).
+require_once APPRESSER_WP_DIR . 'includes/security/class-limit-login.php';
+new AppPresser_Limit_Login();
+
+register_activation_hook( APPRESSER_WP_FILE, array( 'AppPresser_Limit_Login', 'install' ) );
+add_action( 'plugins_loaded', array( 'AppPresser_Limit_Login', 'maybe_upgrade' ) );
+
+// Load bot-block module (rate limiting + IP bans).
+require_once APPRESSER_WP_DIR . 'includes/bot-block/class-ban-store.php';
+require_once APPRESSER_WP_DIR . 'includes/bot-block/class-rate-limiter.php';
+
+register_activation_hook( APPRESSER_WP_FILE, array( 'AppPresser_Bot_Ban_Store', 'install' ) );
+
+register_deactivation_hook( APPRESSER_WP_FILE, 'apppresser_bot_block_deactivate' );
+function apppresser_bot_block_deactivate() {
+	wp_clear_scheduled_hook( 'apppresser_bot_ban_cleanup' );
+}
+
+add_action( 'plugins_loaded', array( 'AppPresser_Bot_Ban_Store', 'maybe_upgrade' ) );
+
+add_action( 'apppresser_bot_ban_cleanup', array( 'AppPresser_Bot_Ban_Store', 'cleanup_expired' ) );
+if ( ! wp_next_scheduled( 'apppresser_bot_ban_cleanup' ) ) {
+	wp_schedule_event( time(), 'daily', 'apppresser_bot_ban_cleanup' );
+}
+
+AppPresser_Bot_Rate_Limiter::instance();
+
+add_action( 'plugins_loaded', 'apppresser_bot_block_load_gravity_forms' );
+function apppresser_bot_block_load_gravity_forms() {
+	if ( ! class_exists( 'GFForms' ) ) {
+		return;
+	}
+
+	$settings = AppPresser_Bot_Rate_Limiter::get_settings();
+
+	if ( empty( $settings['gf_url_block'] ) && empty( $settings['time_trap'] ) && empty( $settings['blocked_words'] ) && empty( $settings['blocked_email_domains'] ) ) {
+		return;
+	}
+
+	require_once APPRESSER_WP_DIR . 'includes/bot-block/class-gravity-forms.php';
+	AppPresser_Bot_Gravity_Forms::instance();
+}
+
+add_action( 'plugins_loaded', 'apppresser_bot_block_load_woocommerce' );
+function apppresser_bot_block_load_woocommerce() {
+	if ( ! class_exists( 'WooCommerce' ) ) {
+		return;
+	}
+
+	require_once APPRESSER_WP_DIR . 'includes/bot-block/class-woocommerce.php';
+	AppPresser_Bot_WooCommerce::instance();
+}
+
 // Load duplicate post/page module.
 require_once APPRESSER_WP_DIR . 'includes/duplicate/class-apppresser-duplicate.php';
 new AppPresser_Duplicate();
@@ -78,3 +131,12 @@ new AppPresser_Avatar();
 // Load SEO module.
 require_once APPRESSER_WP_DIR . 'includes/seo/class-seo.php';
 new AppPresser_Seo();
+
+// Load logs module (outgoing email log).
+require_once APPRESSER_WP_DIR . 'includes/logs/class-email-log.php';
+require_once APPRESSER_WP_DIR . 'includes/logs/class-logs.php';
+
+register_activation_hook( APPRESSER_WP_FILE, array( 'AppPresser_Email_Log', 'install' ) );
+add_action( 'plugins_loaded', array( 'AppPresser_Email_Log', 'maybe_upgrade' ) );
+
+new AppPresser_Logs();
