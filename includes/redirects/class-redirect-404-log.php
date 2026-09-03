@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class AppPresser_Redirect_404_Log {
 
-	const DB_VERSION = '1.0';
+	const DB_VERSION = '1.1';
 
 	/**
 	 * Get the 404 log table name.
@@ -44,6 +44,7 @@ class AppPresser_Redirect_404_Log {
 		$sql = "CREATE TABLE $table (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			url VARCHAR(255) NOT NULL DEFAULT '',
+			ip VARCHAR(45) NOT NULL DEFAULT '',
 			hits INT UNSIGNED NOT NULL DEFAULT 1,
 			last_seen DATETIME NOT NULL,
 			created_at DATETIME NOT NULL,
@@ -72,22 +73,26 @@ class AppPresser_Redirect_404_Log {
 	 * Record (or increment) a 404 hit for a URL.
 	 *
 	 * @param string $url Normalized request path.
+	 * @param string $ip  Client IP address (empty if unavailable).
 	 */
-	public static function log_404( $url ) {
+	public static function log_404( $url, $ip = '' ) {
 		global $wpdb;
 
 		$url   = substr( $url, 0, 255 );
+		$ip    = substr( $ip, 0, 45 );
 		$now   = gmdate( 'Y-m-d H:i:s' );
 		$table = self::table_name();
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $table is a fixed, safe identifier.
 		$wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO $table (url, hits, last_seen, created_at) VALUES (%s, 1, %s, %s) ON DUPLICATE KEY UPDATE hits = hits + 1, last_seen = %s",
+				"INSERT INTO $table (url, ip, hits, last_seen, created_at) VALUES (%s, %s, 1, %s, %s) ON DUPLICATE KEY UPDATE hits = hits + 1, last_seen = %s, ip = %s",
 				$url,
+				$ip,
 				$now,
 				$now,
-				$now
+				$now,
+				$ip
 			)
 		);
 	}

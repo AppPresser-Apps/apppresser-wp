@@ -329,10 +329,13 @@ const RedirectsApp = () => {
 								<thead>
 									<tr>
 										<th>{ __( 'URL', 'apppresser-wp' ) }</th>
-										<th style={ { width: '12%' } }>
+										<th style={ { width: '14%' } }>
+											{ __( 'IP Address', 'apppresser-wp' ) }
+										</th>
+										<th style={ { width: '10%' } }>
 											{ __( 'Hits', 'apppresser-wp' ) }
 										</th>
-										<th style={ { width: '20%' } }>
+										<th style={ { width: '18%' } }>
 											{ __( 'Last Seen', 'apppresser-wp' ) }
 										</th>
 										<th style={ { width: '20%' } }>
@@ -344,6 +347,7 @@ const RedirectsApp = () => {
 									{ notFoundItems.map( ( item ) => (
 										<tr key={ item.id }>
 											<td>{ item.url }</td>
+											<td>{ item.ip || '—' }</td>
 											<td>{ item.hits }</td>
 											<td>{ item.last_seen }</td>
 											<td>

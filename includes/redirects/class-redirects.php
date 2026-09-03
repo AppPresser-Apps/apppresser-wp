@@ -174,7 +174,7 @@ class AppPresser_Redirects {
 	/**
 	 * Format 404 log rows for the JS panel.
 	 *
-	 * @return array<int, array{id: int, url: string, hits: int, last_seen: string}>
+	 * @return array<int, array{id: int, url: string, ip: string, hits: int, last_seen: string}>
 	 */
 	private function get_404s_data() {
 		$logs   = AppPresser_Redirect_404_Log::get_logs( 100 );
@@ -184,6 +184,7 @@ class AppPresser_Redirects {
 			$result[] = array(
 				'id'        => (int) $log->id,
 				'url'       => $log->url,
+				'ip'        => isset( $log->ip ) ? $log->ip : '',
 				'hits'      => (int) $log->hits,
 				'last_seen' => get_date_from_gmt( $log->last_seen ),
 			);
@@ -470,7 +471,26 @@ class AppPresser_Redirects {
 			return;
 		}
 
-		AppPresser_Redirect_404_Log::log_404( $request_path );
+		AppPresser_Redirect_404_Log::log_404( $request_path, $this->get_client_ip() );
+	}
+
+	/**
+	 * Get and validate the client's IP address.
+	 *
+	 * @return string
+	 */
+	private function get_client_ip() {
+		if ( empty( $_SERVER['REMOTE_ADDR'] ) ) {
+			return '';
+		}
+
+		$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+
+		if ( ! filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+			return '';
+		}
+
+		return $ip;
 	}
 
 	/**
