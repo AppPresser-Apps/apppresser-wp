@@ -140,3 +140,12 @@ register_activation_hook( APPRESSER_WP_FILE, array( 'AppPresser_Email_Log', 'ins
 add_action( 'plugins_loaded', array( 'AppPresser_Email_Log', 'maybe_upgrade' ) );
 
 new AppPresser_Logs();
+
+// Load redirects module (URL redirects + 404 tracking).
+require_once APPRESSER_WP_DIR . 'includes/redirects/class-redirect-404-log.php';
+require_once APPRESSER_WP_DIR . 'includes/redirects/class-redirects.php';
+
+register_activation_hook( APPRESSER_WP_FILE, array( 'AppPresser_Redirect_404_Log', 'install' ) );
+add_action( 'plugins_loaded', array( 'AppPresser_Redirect_404_Log', 'maybe_upgrade' ) );
+
+new AppPresser_Redirects();

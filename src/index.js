@@ -13,6 +13,7 @@ import PopUpsApp from './components/PopUpsApp';
 import SecurityApp from './components/SecurityApp';
 import SeoApp from './components/SeoApp';
 import LogsApp from './components/LogsApp';
+import RedirectsApp from './components/RedirectsApp';
 
 const accessibilityContainer = document.getElementById( 'apppresser-accessibility-root' );
 const cookiesContainer = document.getElementById( 'apppresser-cookies-root' );
@@ -24,6 +25,7 @@ const popUpsContainer = document.getElementById( 'apppresser-pop-ups-root' );
 const securityContainer = document.getElementById( 'apppresser-security-root' );
 const seoContainer = document.getElementById( 'apppresser-seo-root' );
 const logsContainer = document.getElementById( 'apppresser-logs-root' );
+const redirectsContainer = document.getElementById( 'apppresser-redirects-root' );
 
 if ( accessibilityContainer ) {
 	const root = createRoot( accessibilityContainer );
@@ -73,4 +75,9 @@ if ( seoContainer ) {
 if ( logsContainer ) {
 	const root = createRoot( logsContainer );
 	root.render( <LogsApp /> );
+}
+
+if ( redirectsContainer ) {
+	const root = createRoot( redirectsContainer );
+	root.render( <RedirectsApp /> );
 }
