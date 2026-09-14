@@ -132,6 +132,14 @@ new AppPresser_Avatar();
 require_once APPRESSER_WP_DIR . 'includes/seo/class-seo.php';
 new AppPresser_Seo();
 
+// Load media alt text module.
+require_once APPRESSER_WP_DIR . 'includes/media/class-alt-text.php';
+new AppPresser_Alt_Text();
+
+// Load media duplicate merge module.
+require_once APPRESSER_WP_DIR . 'includes/media/class-merge-duplicates.php';
+new AppPresser_Merge_Duplicates();
+
 // Load logs module (outgoing email log).
 require_once APPRESSER_WP_DIR . 'includes/logs/class-email-log.php';
 require_once APPRESSER_WP_DIR . 'includes/logs/class-logs.php';
