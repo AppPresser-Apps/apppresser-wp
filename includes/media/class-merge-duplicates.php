@@ -291,7 +291,21 @@ class AppPresser_Merge_Duplicates {
 			return;
 		}
 
-		$group = self::get_group_ids( $hash, $post_id );
+		// An attachment can carry more than one hash row (e.g. after a media
+		// replace or import); use the first value that actually has a group.
+		$hashes = get_post_meta( $post_id, self::HASH_META, false );
+		if ( empty( $hashes ) ) {
+			$hashes = array( $hash );
+		}
+
+		$group = array();
+		foreach ( $hashes as $stored_hash ) {
+			$group = self::get_group_ids( $stored_hash, $post_id );
+			if ( ! empty( $group ) ) {
+				break;
+			}
+		}
+
 		if ( empty( $group ) ) {
 			esc_html_e( 'Unique', 'apppresser-wp' );
 			return;
@@ -558,7 +572,7 @@ class AppPresser_Merge_Duplicates {
 				AND p.post_status = 'inherit'
 				AND p.post_mime_type LIKE %s
 			GROUP BY meta.meta_value
-			HAVING COUNT(meta.post_id) > 1",
+			HAVING COUNT(DISTINCT meta.post_id) > 1",
 			self::HASH_META,
 			'image/%'
 		);
@@ -582,8 +596,15 @@ class AppPresser_Merge_Duplicates {
 		$placeholders = implode( ',', array_fill( 0, count( $hashes ), '%s' ) );
 		$sql          = $wpdb->prepare(
 			// phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- One placeholder per known hash.
-			"SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value IN ({$placeholders})",
-			array_merge( array( self::HASH_META ), $hashes )
+			"SELECT DISTINCT meta.post_id
+			FROM {$wpdb->postmeta} AS meta
+			INNER JOIN {$wpdb->posts} AS p ON p.ID = meta.post_id
+			WHERE meta.meta_key = %s
+				AND meta.meta_value IN ({$placeholders})
+				AND p.post_type = 'attachment'
+				AND p.post_status = 'inherit'
+				AND p.post_mime_type LIKE %s",
+			array_merge( array( self::HASH_META ), $hashes, array( 'image/%' ) )
 		);
 
 		return array_map( 'intval', $wpdb->get_col( $sql ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Query is prepared above.
