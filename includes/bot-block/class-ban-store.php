@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class AppPresser_Bot_Ban_Store {
 
-	const DB_VERSION = '1.0';
+	const DB_VERSION = '1.1';
 
 	/**
 	 * Get the bans table name.
@@ -44,6 +44,7 @@ class AppPresser_Bot_Ban_Store {
 			ban_key VARCHAR(32) NOT NULL,
 			ip VARCHAR(45) NOT NULL,
 			reason VARCHAR(20) NOT NULL DEFAULT '',
+			payload LONGTEXT,
 			created_at DATETIME NOT NULL,
 			expires_at DATETIME NOT NULL,
 			PRIMARY KEY  (id),
@@ -74,8 +75,9 @@ class AppPresser_Bot_Ban_Store {
 	 * @param string $ip      IP address being banned.
 	 * @param int    $seconds Ban duration in seconds.
 	 * @param string $reason  Short reason code.
+	 * @param string $payload Optional stringified request data for admin review.
 	 */
-	public static function ban( $key, $ip, $seconds, $reason = '' ) {
+	public static function ban( $key, $ip, $seconds, $reason = '', $payload = '' ) {
 		global $wpdb;
 
 		$table   = self::table_name();
@@ -85,11 +87,12 @@ class AppPresser_Bot_Ban_Store {
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- $table is a fixed, safe identifier.
 		$wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO $table (ban_key, ip, reason, created_at, expires_at) VALUES (%s, %s, %s, %s, %s)
-				ON DUPLICATE KEY UPDATE ip = VALUES(ip), reason = VALUES(reason), created_at = VALUES(created_at), expires_at = VALUES(expires_at)",
+				"INSERT INTO $table (ban_key, ip, reason, payload, created_at, expires_at) VALUES (%s, %s, %s, %s, %s, %s)
+				ON DUPLICATE KEY UPDATE ip = VALUES(ip), reason = VALUES(reason), payload = VALUES(payload), created_at = VALUES(created_at), expires_at = VALUES(expires_at)",
 				$key,
 				$ip,
 				$reason,
+				$payload,
 				$now,
 				$expires
 			)

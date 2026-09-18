@@ -3,9 +3,9 @@
  */
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { Panel, PanelBody, PanelRow, SelectControl, CheckboxControl, RadioControl, Button, TextControl, TextareaControl, Notice } from '@wordpress/components';
+import { Panel, PanelBody, PanelRow, SelectControl, CheckboxControl, RadioControl, Button, TextControl, TextareaControl, Notice, Modal } from '@wordpress/components';
 
-const { settings, xmlrpcModes, restApiModes, restRoutes, loginIdModes, ajaxUrl, nonce, gfActive, botBans } = window.apppresserSecurity || {};
+const { settings, xmlrpcModes, restApiModes, restRoutes, loginIdModes, ajaxUrl, nonce, gfActive, botBans, botBlockLog } = window.apppresserSecurity || {};
 
 /**
  * A text/number/textarea field that only pushes its value up (and saves)
@@ -60,6 +60,8 @@ const SecurityApp = () => {
 	};
 
 	const [ bans, setBans ] = useState( () => botBans || [] );
+	const [ blockLog, setBlockLog ] = useState( () => botBlockLog || [] );
+	const [ payloadView, setPayloadView ] = useState( null );
 	const [ manualBanIp, setManualBanIp ] = useState( '' );
 	const [ manualBanMinutes, setManualBanMinutes ] = useState( '60' );
 	const [ banError, setBanError ] = useState( '' );
@@ -99,6 +101,20 @@ const SecurityApp = () => {
 			.then( ( data ) => {
 				if ( data && data.success ) {
 					setBans( data.data.bans );
+				}
+			} );
+	};
+
+	const clearBlockLog = () => {
+		const formData = new FormData();
+		formData.append( 'action', 'apppresser_security_clear_block_log' );
+		formData.append( 'nonce', nonce );
+
+		fetch( ajaxUrl, { method: 'POST', body: formData } )
+			.then( ( response ) => response.json() )
+			.then( ( data ) => {
+				if ( data && data.success ) {
+					setBlockLog( [] );
 				}
 			} );
 	};
@@ -147,6 +163,16 @@ const SecurityApp = () => {
 
 	return (
 		<Panel>
+			{ payloadView && (
+				<Modal
+					title={ `${ __( 'Submitted Data', 'apppresser-wp' ) } — ${ payloadView.ip }` }
+					onRequestClose={ () => setPayloadView( null ) }
+				>
+					<pre style={ { whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '60vh', overflowY: 'auto', margin: 0, fontSize: '13px' } }>
+						{ payloadView.payload }
+					</pre>
+				</Modal>
+			) }
 			<PanelBody
 				title={ __( 'XML-RPC', 'apppresser-wp' ) }
 				initialOpen={ true }
@@ -377,7 +403,7 @@ const SecurityApp = () => {
 						checked={ Boolean( values.botblock_enabled ) }
 						onChange={ ( value ) => saveSetting( 'botblock_enabled', value ) }
 						help={ __(
-							'Rate-limits and temporarily bans visitors who submit too many POST requests (e.g. forms) in a short window. Admins are never rate limited.',
+							'Rate-limits and temporarily bans visitors who submit too many POST requests (e.g. forms) in a short window. Logged-in users are never rate limited.',
 							'apppresser-wp'
 						) }
 					/>
@@ -497,6 +523,7 @@ const SecurityApp = () => {
 									<tr>
 										<th>{ __( 'IP Address', 'apppresser-wp' ) }</th>
 										<th>{ __( 'Reason', 'apppresser-wp' ) }</th>
+										<th>{ __( 'Submitted Data', 'apppresser-wp' ) }</th>
 										<th>{ __( 'Banned At', 'apppresser-wp' ) }</th>
 										<th>{ __( 'Expires', 'apppresser-wp' ) }</th>
 										<th>{ __( 'Action', 'apppresser-wp' ) }</th>
@@ -507,6 +534,15 @@ const SecurityApp = () => {
 										<tr key={ ban.id }>
 											<td>{ ban.ip }</td>
 											<td>{ ban.reason }</td>
+											<td>
+												{ ban.payload ? (
+													<Button variant="secondary" size="small" onClick={ () => setPayloadView( ban ) }>
+														{ __( 'View', 'apppresser-wp' ) }
+													</Button>
+												) : (
+													'—'
+												) }
+											</td>
 											<td>{ ban.created_at }</td>
 											<td>{ ban.expires_at }</td>
 											<td>
@@ -518,6 +554,43 @@ const SecurityApp = () => {
 									) ) }
 								</tbody>
 							</table>
+						) }
+					</div>
+				</PanelRow>
+				<PanelRow>
+					<div style={ { width: '100%' } }>
+						<h4>{ __( 'Recent Blocked Requests', 'apppresser-wp' ) }</h4>
+						<p className="description">
+							{ __( 'Bans expire quickly and disappear from the table above. This log keeps the 50 most recent blocked requests so you can see what was blocked and why.', 'apppresser-wp' ) }
+						</p>
+						{ blockLog.length === 0 ? (
+							<p>{ __( 'No blocked requests recorded.', 'apppresser-wp' ) }</p>
+						) : (
+							<>
+								<table className="wp-list-table widefat fixed striped">
+									<thead>
+										<tr>
+											<th>{ __( 'Time', 'apppresser-wp' ) }</th>
+											<th>{ __( 'IP Address', 'apppresser-wp' ) }</th>
+											<th>{ __( 'Reason', 'apppresser-wp' ) }</th>
+										</tr>
+									</thead>
+									<tbody>
+										{ blockLog.map( ( entry, index ) => (
+											<tr key={ index }>
+												<td>{ entry.time }</td>
+												<td>{ entry.ip }</td>
+												<td>{ entry.reason }</td>
+											</tr>
+										) ) }
+									</tbody>
+								</table>
+								<div style={ { marginTop: 8 } }>
+									<Button isDestructive variant="secondary" onClick={ clearBlockLog }>
+										{ __( 'Clear Log', 'apppresser-wp' ) }
+									</Button>
+								</div>
+							</>
 						) }
 					</div>
 				</PanelRow>

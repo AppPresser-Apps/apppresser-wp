@@ -113,6 +113,7 @@ class AppPresser_Security {
 		add_action( 'wp_ajax_apppresser_security_save_setting', array( $this, 'handle_save_setting' ) );
 		add_action( 'wp_ajax_apppresser_security_bot_manual_ban', array( $this, 'handle_bot_manual_ban' ) );
 		add_action( 'wp_ajax_apppresser_security_bot_unban', array( $this, 'handle_bot_unban' ) );
+		add_action( 'wp_ajax_apppresser_security_clear_block_log', array( $this, 'handle_clear_block_log' ) );
 
 		$xmlrpc_mode = $this->get_xmlrpc_mode();
 
@@ -634,6 +635,7 @@ class AppPresser_Security {
 					'loginIdModes' => $this->login_id_modes,
 					'gfActive'     => class_exists( 'GFForms' ),
 					'botBans'      => $this->get_active_bans_data(),
+					'botBlockLog'  => $this->get_block_log_data(),
 					'settings'     => array(
 						'xmlrpc_mode'                    => $this->get_xmlrpc_mode(),
 						'xmlrpc_multiauth'               => (bool) get_option( 'apppresser_xmlrpc_multiauth_enabled', false ),
@@ -941,8 +943,48 @@ class AppPresser_Security {
 				'id'         => (int) $ban->id,
 				'ip'         => $ban->ip,
 				'reason'     => $ban->reason,
+				'payload'    => isset( $ban->payload ) ? (string) $ban->payload : '',
 				'created_at' => get_date_from_gmt( $ban->created_at ),
 				'expires_at' => get_date_from_gmt( $ban->expires_at ),
+			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * AJAX handler for clearing the bot-block event log.
+	 */
+	public function handle_clear_block_log() {
+		check_ajax_referer( 'apppresser_security_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( -1, 403 );
+		}
+
+		AppPresser_Bot_Rate_Limiter::clear_block_log();
+
+		wp_send_json_success();
+	}
+
+	/**
+	 * Format the bot-block event log for the JS panel.
+	 *
+	 * @return array<int, array{time: string, ip: string, reason: string}>
+	 */
+	private function get_block_log_data() {
+		$log    = AppPresser_Bot_Rate_Limiter::get_block_log();
+		$result = array();
+
+		foreach ( $log as $entry ) {
+			if ( empty( $entry['time'] ) ) {
+				continue;
+			}
+
+			$result[] = array(
+				'time'   => get_date_from_gmt( $entry['time'] ),
+				'ip'     => isset( $entry['ip'] ) ? $entry['ip'] : '',
+				'reason' => isset( $entry['reason'] ) ? $entry['reason'] : '',
 			);
 		}
 

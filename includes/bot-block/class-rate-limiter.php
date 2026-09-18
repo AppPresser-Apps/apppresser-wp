@@ -89,7 +89,8 @@ class AppPresser_Bot_Rate_Limiter {
 			return;
 		}
 
-		if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) {
+		// Logged-in users are never rate limited.
+		if ( is_user_logged_in() ) {
 			return;
 		}
 
@@ -128,23 +129,16 @@ class AppPresser_Bot_Rate_Limiter {
 		$ip_ban     = AppPresser_Bot_Ban_Store::get_ban( $ip_ban_key );
 
 		if ( $ip_ban ) {
-			$this->block_request( AppPresser_Bot_Ban_Store::get_ban_ttl( $ip_ban ) );
+			$this->block_request( AppPresser_Bot_Ban_Store::get_ban_ttl( $ip_ban ), $ip_ban->reason );
 		}
 
 		$ip_max_requests = $max_requests * 10;
 		$ip_key          = self::TRANSIENT_PREFIX . 'ip_' . md5( $ip );
-		$ip_count        = get_transient( $ip_key );
+		$ip_count        = $this->increment_counter( $ip_key, $window );
 
-		if ( false === $ip_count ) {
-			set_transient( $ip_key, 1, $window );
-		} else {
-			$ip_count = (int) $ip_count + 1;
-			set_transient( $ip_key, $ip_count, $window );
-
-			if ( $ip_count > $ip_max_requests ) {
-				AppPresser_Bot_Ban_Store::ban( $ip_ban_key, $ip, $ban_length, 'ip_flood' );
-				$this->block_request( $ban_length );
-			}
+		if ( $ip_count > $ip_max_requests ) {
+			AppPresser_Bot_Ban_Store::ban( $ip_ban_key, $ip, $ban_length, 'ip_flood', $this->get_request_payload() );
+			$this->block_request( $ban_length, 'ip_flood' );
 		}
 
 		$identifier = $this->get_client_identifier( $ip );
@@ -153,23 +147,15 @@ class AppPresser_Bot_Rate_Limiter {
 		$ban     = AppPresser_Bot_Ban_Store::get_ban( $ban_key );
 
 		if ( $ban ) {
-			$this->block_request( AppPresser_Bot_Ban_Store::get_ban_ttl( $ban ) );
+			$this->block_request( AppPresser_Bot_Ban_Store::get_ban_ttl( $ban ), $ban->reason );
 		}
 
 		$key   = self::TRANSIENT_PREFIX . md5( $identifier );
-		$count = get_transient( $key );
-
-		if ( false === $count ) {
-			set_transient( $key, 1, $window );
-			return;
-		}
-
-		$count = (int) $count + 1;
-		set_transient( $key, $count, $window );
+		$count = $this->increment_counter( $key, $window );
 
 		if ( $count > $max_requests ) {
-			AppPresser_Bot_Ban_Store::ban( $ban_key, $ip, $ban_length, 'rate_limit' );
-			$this->block_request( $ban_length );
+			AppPresser_Bot_Ban_Store::ban( $ban_key, $ip, $ban_length, 'rate_limit', $this->get_request_payload() );
+			$this->block_request( $ban_length, 'rate_limit' );
 		}
 	}
 
@@ -189,6 +175,133 @@ class AppPresser_Bot_Rate_Limiter {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Captured payload keys that must never be stored (credentials, secrets,
+	 * payment data). Matched case-insensitively against the full field path.
+	 */
+	const SENSITIVE_KEY_PATTERN = '/pass(word|wd|phrase)?|pwd|credential|secret|token|nonce|auth|api[-_]?key|card|cvv|ssn|social/i';
+
+	/**
+	 * Stringify the current POST body for admin review on a ban record.
+	 *
+	 * wp-login.php requests never reach this code (they are exempt), but a
+	 * front-end login form can POST elsewhere, so any field whose name looks
+	 * like a credential/secret is redacted rather than stored.
+	 *
+	 * @return string
+	 */
+	private function get_request_payload() {
+		if ( empty( $_POST ) || ! is_array( $_POST ) ) {
+			return '';
+		}
+
+		$lines = array();
+		$this->flatten_post( $_POST, '', $lines );
+
+		$payload = implode( "\n", $lines );
+
+		if ( strlen( $payload ) > 10000 ) {
+			$payload = substr( $payload, 0, 10000 ) . "\n… (truncated)";
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Flatten a (possibly nested) POST array into "key = value" lines.
+	 *
+	 * @param array  $data   Data to flatten.
+	 * @param string $prefix Key path prefix for nested arrays.
+	 * @param array  $lines  Accumulator for output lines.
+	 * @param int    $depth  Current nesting depth (guards against deep input).
+	 */
+	private function flatten_post( $data, $prefix, &$lines, $depth = 0 ) {
+		if ( $depth > 5 ) {
+			$lines[] = $prefix . ' = [nested data omitted]';
+			return;
+		}
+
+		foreach ( $data as $key => $value ) {
+			$key   = sanitize_text_field( wp_unslash( (string) $key ) );
+			$label = '' === $prefix ? $key : $prefix . '[' . $key . ']';
+
+			if ( is_array( $value ) ) {
+				$this->flatten_post( $value, $label, $lines, $depth + 1 );
+				continue;
+			}
+
+			if ( ! is_scalar( $value ) ) {
+				continue;
+			}
+
+			if ( preg_match( self::SENSITIVE_KEY_PATTERN, $label ) ) {
+				$lines[] = $label . ' = [redacted]';
+				continue;
+			}
+
+			$value = sanitize_textarea_field( wp_unslash( (string) $value ) );
+
+			if ( strlen( $value ) > 500 ) {
+				$value = substr( $value, 0, 500 ) . '…';
+			}
+
+			$lines[] = $label . ' = ' . $value;
+		}
+	}
+
+	/**
+	 * Increment a fixed-window request counter.
+	 *
+	 * The window starts at the first request in the window and does NOT
+	 * slide: writes store the window start time and refresh the transient
+	 * with only the remaining TTL, so a steady trickle of requests below
+	 * the limit can still accumulate across the whole window without
+	 * resetting the clock and can only reset after $window seconds pass
+	 * from the first request.
+	 *
+	 * @param string $key    Transient key.
+	 * @param int    $window Window length in seconds.
+	 * @return int The request count within the current window.
+	 */
+	private function increment_counter( $key, $window ) {
+		$now  = time();
+		$data = get_transient( $key );
+
+		if ( is_array( $data ) && isset( $data['count'], $data['start'] ) ) {
+			$elapsed = $now - (int) $data['start'];
+
+			if ( $elapsed < $window ) {
+				$count = (int) $data['count'] + 1;
+
+				set_transient(
+					$key,
+					array(
+						'count' => $count,
+						'start' => (int) $data['start'],
+					),
+					max( 1, $window - $elapsed )
+				);
+
+				return $count;
+			}
+		}
+
+		// First request of a new window. Counters written by older versions
+		// (plain integers) carry their count forward into a fresh window.
+		$count = is_numeric( $data ) ? (int) $data + 1 : 1;
+
+		set_transient(
+			$key,
+			array(
+				'count' => $count,
+				'start' => $now,
+			),
+			$window
+		);
+
+		return $count;
 	}
 
 	/**
@@ -241,7 +354,7 @@ class AppPresser_Bot_Rate_Limiter {
 		}
 
 		list( $subnet, $bits ) = explode( '/', $cidr, 2 );
-		$bits = (int) $bits;
+		$bits                  = (int) $bits;
 
 		if ( filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) && filter_var( $subnet, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
 			$mask = -1 << ( 32 - $bits );
@@ -277,7 +390,13 @@ class AppPresser_Bot_Rate_Limiter {
 	}
 
 	/**
-	 * Get and validate the client's REMOTE_ADDR.
+	 * Get and validate the client's IP address.
+	 *
+	 * Only REMOTE_ADDR is trusted by default. If the site sits behind a
+	 * reverse proxy or load balancer, add the proxy's IP(s) via the
+	 * apb_trusted_proxy_ips filter so the real client IP is read from
+	 * X-Forwarded-For; otherwise every visitor shares the proxy's IP and
+	 * the IP-wide flood backstop will ban them collectively.
 	 *
 	 * @return string
 	 */
@@ -286,21 +405,86 @@ class AppPresser_Bot_Rate_Limiter {
 			return '';
 		}
 
-		$ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+		$remote_addr = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
 
-		if ( ! filter_var( $ip, FILTER_VALIDATE_IP ) ) {
+		if ( ! filter_var( $remote_addr, FILTER_VALIDATE_IP ) ) {
 			return '';
 		}
 
-		return $ip;
+		/**
+		 * Filter the list of trusted proxy IPs allowed to provide the client
+		 * IP via the X-Forwarded-For header.
+		 *
+		 * @param array  $trusted_proxies IPs of reverse proxies/load balancers.
+		 * @param string $remote_addr     The direct connection IP.
+		 */
+		$trusted_proxies = (array) apply_filters( 'apb_trusted_proxy_ips', array(), $remote_addr );
+
+		if ( ! empty( $trusted_proxies ) && in_array( $remote_addr, $trusted_proxies, true ) && ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+			$forwarded = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
+
+			// The client is the left-most entry; walk down the chain until a
+			// valid, non-trusted IP is found.
+			foreach ( $forwarded as $candidate ) {
+				$candidate = trim( $candidate );
+
+				if ( filter_var( $candidate, FILTER_VALIDATE_IP ) && ! in_array( $candidate, $trusted_proxies, true ) ) {
+					return $candidate;
+				}
+			}
+		}
+
+		return $remote_addr;
+	}
+
+	/**
+	 * Record a blocked request so admins can review blocks after the
+	 * fact. Bans are short-lived and the bans table only shows active
+	 * bans, so without this log there is no trace of what was blocked.
+	 * Capped at the 50 most recent events; stored with autoload off.
+	 *
+	 * @param string $reason Short reason code.
+	 */
+	private function record_block( $reason ) {
+		$log = (array) get_option( 'apppresser_bot_block_log', array() );
+
+		array_unshift(
+			$log,
+			array(
+				'time'   => gmdate( 'Y-m-d H:i:s' ),
+				'ip'     => $this->get_client_ip(),
+				'reason' => $reason,
+			)
+		);
+
+		update_option( 'apppresser_bot_block_log', array_slice( $log, 0, 50 ), false );
+	}
+
+	/**
+	 * The recorded block events, newest first.
+	 *
+	 * @return array
+	 */
+	public static function get_block_log() {
+		return (array) get_option( 'apppresser_bot_block_log', array() );
+	}
+
+	/**
+	 * Clear all recorded block events.
+	 */
+	public static function clear_block_log() {
+		delete_option( 'apppresser_bot_block_log' );
 	}
 
 	/**
 	 * Send a 429 Too Many Requests response and stop execution.
 	 *
-	 * @param int $retry_after Seconds until the client may retry.
+	 * @param int    $retry_after Seconds until the client may retry.
+	 * @param string $reason      Short reason code (rate_limit or ip_flood).
 	 */
-	private function block_request( $retry_after ) {
+	private function block_request( $retry_after, $reason = '' ) {
+		$this->record_block( $reason );
+
 		status_header( 429 );
 		header( 'Retry-After: ' . (int) $retry_after );
 		header( 'Content-Type: text/plain; charset=utf-8' );
@@ -314,6 +498,8 @@ class AppPresser_Bot_Rate_Limiter {
 	 * Send a 403 Forbidden response and stop execution.
 	 */
 	private function block_forbidden() {
+		$this->record_block( 'blocked_range' );
+
 		status_header( 403 );
 		header( 'Content-Type: text/plain; charset=utf-8' );
 		nocache_headers();
