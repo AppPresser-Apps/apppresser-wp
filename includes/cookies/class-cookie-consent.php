@@ -29,6 +29,8 @@ class AppPresser_Cookie_Consent {
 	public function __construct() {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		add_action( 'wp_footer', array( $this, 'render_banner' ) );
+		add_action( 'wp_head', array( $this, 'render_google_tag' ) );
+		add_action( 'wp_head', array( $this, 'render_marketing_pixel' ) );
 	}
 
 	/**
@@ -45,8 +47,10 @@ class AppPresser_Cookie_Consent {
 				'position'        => get_option( 'apppresser_cookie_banner_position', 'left_bottom' ),
 				'message'         => get_option( 'apppresser_cookie_message', '' ),
 				'settings_button' => get_option( 'apppresser_cookie_button_settings', '' ) ?: __( 'Preferences', 'apppresser-wp' ),
-				'reject_button'   => get_option( 'apppresser_cookie_button_reject', '' ) ?: __( 'Reject', 'apppresser-wp' ),
+				'reject_button'   => get_option( 'apppresser_cookie_button_reject', '' ) ?: __( 'Reject All', 'apppresser-wp' ),
 				'accept_button'   => get_option( 'apppresser_cookie_button_accept', '' ) ?: __( 'Accept All', 'apppresser-wp' ),
+				'google_tag_id'   => trim( get_option( 'apppresser_cookie_google_tracking_id', '' ) ),
+				'marketing_pixel' => trim( get_option( 'apppresser_cookie_marketing_pixel', '' ) ),
 			);
 		}
 		return $this->settings;
@@ -62,18 +66,21 @@ class AppPresser_Cookie_Consent {
 			return;
 		}
 
+		$css_path = APPRESSER_WP_DIR . 'includes/cookies/css/cookie-consent.css';
+		$js_path  = APPRESSER_WP_DIR . 'includes/cookies/js/cookie-consent.js';
+
 		wp_enqueue_style(
 			'apppresser-cookie-consent',
 			APPRESSER_WP_URL . '/includes/cookies/css/cookie-consent.css',
 			array(),
-			'1.0.0'
+			file_exists( $css_path ) ? filemtime( $css_path ) : '1.0.0'
 		);
 
 		wp_enqueue_script(
 			'apppresser-cookie-consent',
 			APPRESSER_WP_URL . '/includes/cookies/js/cookie-consent.js',
 			array(),
-			'1.0.0',
+			file_exists( $js_path ) ? filemtime( $js_path ) : '1.0.0',
 			true
 		);
 
@@ -84,8 +91,55 @@ class AppPresser_Cookie_Consent {
 				'duration'        => absint( $settings['duration'] ),
 				'cookieName'      => 'apppresser_cookie_consent',
 				'prefsCookieName' => 'apppresser_cookie_prefs',
+				'googleTagId'     => $settings['google_tag_id'],
+				'marketingPixel'  => $settings['marketing_pixel'],
 			)
 		);
+	}
+
+	/**
+	 * Output the Google tag (gtag.js) snippet.
+	 *
+	 * When the consent banner is enabled the tag is NOT printed here; the
+	 * frontend JS injects it only after the visitor accepts analytics cookies.
+	 * With the banner disabled the tag loads unconditionally.
+	 */
+	public function render_google_tag() {
+		$settings = $this->get_settings();
+
+		if ( $settings['enabled'] || empty( $settings['google_tag_id'] ) ) {
+			return;
+		}
+
+		$id = $settings['google_tag_id'];
+		?>
+		<!-- Google tag (gtag.js) -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=<?php echo esc_attr( rawurlencode( $id ) ); ?>"></script>
+		<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag(){dataLayer.push(arguments);}
+		gtag('js', new Date());
+		gtag('config', '<?php echo esc_js( $id ); ?>');
+		</script>
+		<?php
+	}
+
+	/**
+	 * Output the marketing pixel code.
+	 *
+	 * When the consent banner is enabled the pixel is NOT printed here; the
+	 * frontend JS injects it only after the visitor accepts marketing cookies.
+	 * With the banner disabled the pixel loads unconditionally.
+	 */
+	public function render_marketing_pixel() {
+		$settings = $this->get_settings();
+
+		if ( $settings['enabled'] || empty( $settings['marketing_pixel'] ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo $settings['marketing_pixel'];
 	}
 
 	/**
@@ -188,6 +242,7 @@ class AppPresser_Cookie_Consent {
 						</p>
 					</div>
 
+					<?php if ( ! empty( $settings['marketing_pixel'] ) ) : ?>
 					<div class="apppresser-cookie-pref-category">
 						<div class="apppresser-cookie-pref-category__header">
 							<h4><?php esc_html_e( 'Marketing Cookies', 'apppresser-wp' ); ?></h4>
@@ -200,12 +255,10 @@ class AppPresser_Cookie_Consent {
 							<?php esc_html_e( 'These cookies may be set through our site by our advertising partners to build a profile of your interests.', 'apppresser-wp' ); ?>
 						</p>
 					</div>
+					<?php endif; ?>
 				</div>
 
 				<div class="apppresser-cookie-preferences__actions">
-					<button type="button" class="apppresser-cookie-banner__btn apppresser-cookie-banner__btn--reject" id="apppresser-cookie-reject-all-btn">
-						<?php esc_html_e( 'Reject All', 'apppresser-wp' ); ?>
-					</button>
 					<button type="button" class="apppresser-cookie-banner__btn apppresser-cookie-banner__btn--accept" id="apppresser-cookie-save-prefs-btn">
 						<?php esc_html_e( 'Save Preferences', 'apppresser-wp' ); ?>
 					</button>

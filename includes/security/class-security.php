@@ -508,7 +508,9 @@ class AppPresser_Security {
 
 	/**
 	 * Strip the "ver" query arg from enqueued style/script URLs for
-	 * logged-out frontend requests, so no WordPress version number leaks.
+	 * logged-out frontend requests when it would leak the WordPress version.
+	 * Plugin/theme asset versions are left alone so browser cache-busting
+	 * keeps working.
 	 */
 	public function maybe_strip_resource_versions() {
 		if ( is_admin() || is_user_logged_in() ) {
@@ -520,7 +522,8 @@ class AppPresser_Security {
 	}
 
 	/**
-	 * Remove the "ver" query arg from a resource URL.
+	 * Remove the "ver" query arg from a resource URL if it is the WordPress
+	 * core version (the value that identifies the install).
 	 *
 	 * @param string $src Resource URL.
 	 * @return string
@@ -530,7 +533,14 @@ class AppPresser_Security {
 			return $src;
 		}
 
-		return remove_query_arg( 'ver', $src );
+		$query = wp_parse_url( $src, PHP_URL_QUERY );
+		wp_parse_str( (string) $query, $args );
+
+		if ( isset( $args['ver'] ) && get_bloginfo( 'version' ) === $args['ver'] ) {
+			return remove_query_arg( 'ver', $src );
+		}
+
+		return $src;
 	}
 
 	/**

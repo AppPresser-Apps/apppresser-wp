@@ -62,6 +62,14 @@ class AppPresser_Cookies {
 			'default'  => '',
 			'sanitize' => 'text',
 		),
+		'apppresser_cookie_google_tracking_id' => array(
+			'default'  => '',
+			'sanitize' => 'text',
+		),
+		'apppresser_cookie_marketing_pixel' => array(
+			'default'  => '',
+			'sanitize' => 'raw',
+		),
 	);
 
 	/**
@@ -230,6 +238,11 @@ class AppPresser_Cookies {
 				break;
 			case 'html':
 				$value = wp_kses_post( $value );
+				break;
+			case 'raw':
+				// Intentionally not passed through wp_kses: this field accepts
+				// tracking pixel script/HTML and is limited to manage_options users.
+				$value = trim( (string) $value );
 				break;
 			case 'text':
 			default:

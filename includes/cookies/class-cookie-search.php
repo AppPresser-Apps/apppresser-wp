@@ -1002,7 +1002,7 @@ class AppPresser_Cookie_Search {
 				var banner = document.getElementById('apppresser-cookie-banner');
 				var prefs  = document.getElementById('apppresser-cookie-preferences');
 				if (banner) {
-					banner.classList.add('is-visible');
+					banner.classList.add('is-visible', 'has-preferences-open');
 					banner.setAttribute('aria-hidden', 'false');
 				}
 				if (prefs) {
@@ -1038,7 +1038,7 @@ class AppPresser_Cookie_Search {
 				var banner = document.getElementById('apppresser-cookie-banner');
 				var prefs  = document.getElementById('apppresser-cookie-preferences');
 				if (banner) {
-					banner.classList.add('is-visible');
+					banner.classList.add('is-visible', 'has-preferences-open');
 					banner.setAttribute('aria-hidden', 'false');
 				}
 				if (prefs) {

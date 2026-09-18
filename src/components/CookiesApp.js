@@ -35,6 +35,10 @@ const CookiesApp = () => {
 			settings?.apppresser_cookie_button_reject || '',
 		apppresser_cookie_button_accept:
 			settings?.apppresser_cookie_button_accept || '',
+		apppresser_cookie_google_tracking_id:
+			settings?.apppresser_cookie_google_tracking_id || '',
+		apppresser_cookie_marketing_pixel:
+			settings?.apppresser_cookie_marketing_pixel || '',
 	} ) );
 
 	const [ saving, setSaving ] = useState( null );
@@ -171,6 +175,50 @@ const CookiesApp = () => {
 			</PanelBody>
 
 			<PanelBody
+				title={ __( 'Tracking', 'apppresser-wp' ) }
+				initialOpen={ true }
+			>
+				<PanelRow>
+					<TextControl
+						label={ __(
+							'Google Measurement ID',
+							'apppresser-wp'
+						) }
+						help={ __(
+							'Google Analytics / Google tag ID (e.g. G-XXXXXXXXXX). When the consent banner is enabled the tag is only loaded after a visitor accepts analytics cookies, and is never loaded if they reject. Remove any gtag.js snippet from Options → Custom Code so it is not loaded twice.',
+							'apppresser-wp'
+						) }
+						value={ values.apppresser_cookie_google_tracking_id }
+						placeholder="G-XXXXXXXXXX"
+						onChange={ ( value ) =>
+							saveSetting(
+								'apppresser_cookie_google_tracking_id',
+								value.trim()
+							)
+						}
+					/>
+				</PanelRow>
+
+				<PanelRow>
+					<TextareaControl
+						label={ __( 'Marketing Pixel Code', 'apppresser-wp' ) }
+						help={ __(
+							'Paste an advertising pixel snippet (e.g. Meta Pixel, Google Ads, LinkedIn Insight), including its <script> tags. When set, a "Marketing Cookies" category appears in the consent preferences and the pixel only loads after a visitor accepts it. Leave empty to hide the Marketing category.',
+							'apppresser-wp'
+						) }
+						value={ values.apppresser_cookie_marketing_pixel }
+						rows={ 6 }
+						onChange={ ( value ) =>
+							saveSetting(
+								'apppresser_cookie_marketing_pixel',
+								value
+							)
+						}
+					/>
+				</PanelRow>
+			</PanelBody>
+
+			<PanelBody
 				title={ __( 'Appearance', 'apppresser-wp' ) }
 				initialOpen={ true }
 			>
@@ -249,7 +297,7 @@ const CookiesApp = () => {
 						value={
 							values.apppresser_cookie_button_reject
 						}
-						placeholder={ __( 'Reject', 'apppresser-wp' ) }
+						placeholder={ __( 'Reject All', 'apppresser-wp' ) }
 						onChange={ ( value ) =>
 							saveSetting(
 								'apppresser_cookie_button_reject',

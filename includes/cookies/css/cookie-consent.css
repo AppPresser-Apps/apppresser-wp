@@ -184,6 +184,10 @@
 	border-color: var(--apppresser-cookie-accent);
 }
 
+.apppresser-cookie-banner.has-preferences-open .apppresser-cookie-banner__btn--settings {
+	display: none;
+}
+
 .apppresser-cookie-banner__btn--settings:hover {
 	background: rgba(0, 90, 156, 0.05);
 }
@@ -321,6 +325,7 @@
 .apppresser-cookie-preferences__actions {
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: flex-end;
 	gap: 8px;
 	margin-bottom: 12px;
 }
