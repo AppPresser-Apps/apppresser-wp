@@ -224,7 +224,7 @@ const SecurityApp = () => {
 							} ) ) }
 							onChange={ ( value ) => saveSetting( 'rest_api_access', value ) }
 							help={ __(
-								'Default Access leaves the API as WordPress configures it. Restrict All Access turns the REST API off entirely. Allowed Endpoints lets you choose which endpoints are available using the list below: unchecking a public endpoint requires authentication to access it, while unchecking an authenticated endpoint disables it completely.',
+								'Default Access leaves the API as WordPress configures it. Restrict All Access turns the REST API off entirely. Allowed Endpoints lets you choose which endpoints are public using the list below: unchecked endpoints require authentication. Logged-in users always have access to all endpoints.',
 								'apppresser-wp'
 							) }
 						/>

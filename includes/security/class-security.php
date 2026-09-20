@@ -133,7 +133,8 @@ class AppPresser_Security {
 		if ( 'restricted' === $rest_api_access ) {
 			add_filter( 'rest_authentication_errors', array( $this, 'disable_rest_api' ) );
 		} elseif ( 'allowed' === $rest_api_access ) {
-			add_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
+			// Routes stay registered so logged-in users keep full access;
+			// only logged-out requests to unchecked endpoints are rejected.
 			add_filter( 'rest_dispatch_request', array( $this, 'restrict_public_rest_api' ), 10, 4 );
 		}
 
@@ -308,53 +309,10 @@ class AppPresser_Security {
 	}
 
 	/**
-	 * Remove blocked REST API endpoints.
+	 * Block unchecked REST API endpoints for logged-out users.
 	 *
-	 * Only authenticated endpoints are removed entirely. Public endpoints are
-	 * kept in the index but gated for logged-out users by
-	 * {@see AppPresser_Security::restrict_public_rest_api()}.
-	 *
-	 * @param array $endpoints Registered REST API endpoints.
-	 * @return array
-	 */
-	public function filter_rest_endpoints( $endpoints ) {
-		$blocked = get_option( 'apppresser_rest_blocked_endpoints', array() );
-
-		if ( ! is_array( $blocked ) || empty( $blocked ) ) {
-			return $endpoints;
-		}
-
-		foreach ( $endpoints as $route => $handlers ) {
-			if ( in_array( $route, $blocked, true ) && $this->route_has_permission_callback( $handlers ) ) {
-				unset( $endpoints[ $route ] );
-			}
-		}
-
-		return $endpoints;
-	}
-
-	/**
-	 * Determine whether a route requires authentication.
-	 *
-	 * @param array $handlers The raw route handlers from the endpoints array.
-	 * @return bool
-	 */
-	private function route_has_permission_callback( $handlers ) {
-		if ( isset( $handlers['callback'] ) ) {
-			$handlers = array( $handlers );
-		}
-
-		foreach ( $handlers as $handler ) {
-			if ( ! empty( $handler['permission_callback'] ) ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Block unchecked public REST API endpoints for logged-out users.
+	 * Authenticated users always receive the full API; an unchecked endpoint
+	 * is only rejected while the request is not logged in.
 	 *
 	 * @param mixed           $dispatch_result Current dispatch result.
 	 * @param WP_REST_Request $request         The request object.
@@ -394,20 +352,7 @@ class AppPresser_Security {
 			return array();
 		}
 
-		// Temporarily remove our endpoint filter so the full list is returned
-		// even when "Allowed Endpoints" mode is active. Otherwise blocked
-		// routes would vanish from the admin and could not be re-enabled.
-		$has_filter = has_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
-
-		if ( $has_filter ) {
-			remove_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
-		}
-
 		$routes = rest_get_server()->get_routes();
-
-		if ( $has_filter ) {
-			add_filter( 'rest_endpoints', array( $this, 'filter_rest_endpoints' ) );
-		}
 
 		$result = array();
 
